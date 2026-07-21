@@ -17,11 +17,23 @@ Quick local steps to review the skeleton
    .\.venv\Scripts\activate
    pip install -r reservation-system\backend\requirements.txt
 
-2. Run the backend:
+2. Run the backend locally:
 
    python reservation-system\backend\app.py
 
-3. Open the frontend files in a browser: open reservation-system\frontend\calendar-manager\index.html and reservation-system\frontend\reservation-dashboard\index.html
+3. Manage database migrations:
+
+   cd reservation-system
+   python -m flask --app backend db migrate -m "Initial migration"
+   python -m flask --app backend db upgrade
+
+4. Open the frontend files in a browser: open reservation-system\frontend\calendar-manager\index.html and reservation-system\frontend\reservation-dashboard\index.html
+
+5. Run with Docker and Postgres:
+
+   docker compose up --build
+
+   The backend will connect to Postgres at the URL defined in `DATABASE_URL`.
 
 Pushing this skeleton to GitHub
 ------------------------------
