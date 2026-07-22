@@ -1,0 +1,32 @@
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+venv/
+
+# Env files
+.env
+.env.*
+
+# SQLite
+*.db
+*.sqlite3
+reservation.db
+
+# Flask/Migrations
+
+# pytest
+.pytest_cache/
+
+# Docker
+*.local
+
+# Editor files
+*.swp
+*.swo
+.vscode/
