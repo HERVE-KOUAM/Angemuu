@@ -1,0 +1,229 @@
+.booking-shell {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(249, 237, 241, 0.95));
+    border: 1px solid rgba(192, 114, 146, 0.25);
+    border-radius: 24px;
+    padding: 28px;
+    box-shadow: 0 20px 45px rgba(83, 33, 63, 0.12);
+}
+
+.booking-shell .form-label {
+    font-weight: 600;
+    color: #5f3854;
+}
+
+.booking-shell .form-control,
+.booking-shell .form-select {
+    border-radius: 14px;
+    border: 1px solid #e8d2da;
+    padding: 10px 14px;
+    background: #fff;
+}
+
+.booking-shell .theme-btn {
+    border-radius: 999px;
+    padding: 12px 28px;
+}
+
+.booking-card {
+    background: #fff;
+    border-radius: 18px;
+    padding: 20px;
+    border: 1px solid rgba(192, 114, 146, 0.18);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+    margin-bottom: 18px;
+}
+
+.booking-card h5 {
+    color: #7a3d5a;
+}
+
+.dashboard-grid {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: 1.8fr 1fr;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.calendar-cell {
+    border: 1px solid #f0dce3;
+    border-radius: 14px;
+    min-height: 92px;
+    padding: 8px;
+    background: #fff;
+    position: relative;
+}
+
+.calendar-cell.muted {
+    background: #fcf6f8;
+    opacity: 0.7;
+}
+
+.calendar-cell.today {
+    border-color: #c06f90;
+    box-shadow: inset 0 0 0 2px rgba(192, 114, 146, 0.2);
+}
+
+.calendar-cell.off-day {
+    background: #f7e8ef;
+}
+
+.calendar-cell.booked-day {
+    background: linear-gradient(135deg, #fff8fb, #ffeef6);
+}
+
+.calendar-pill {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    margin-top: 6px;
+    background: #efc4d6;
+    color: #7a3d5a;
+}
+
+.calendar-pill.off {
+    background: #c95a74;
+    color: #fff;
+}
+
+.action-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    padding: 6px 10px;
+    border: 1px solid rgba(192, 114, 146, 0.2);
+    background: #fff;
+    color: #7a3d5a;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.action-chip:hover {
+    transform: translateY(-1px);
+}
+
+.notification-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #f7e8ef;
+    color: #7a3d5a;
+    font-size: 12px;
+}
+
+.status-pill {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-pill.pending {
+    background: #fde7b0;
+    color: #915c00;
+}
+
+.status-pill.confirmed {
+    background: #dff8e8;
+    color: #1e6b3c;
+}
+
+.status-pill.canceled {
+    background: #fbd9df;
+    color: #8d3148;
+}
+
+.admin-nav {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.admin-nav a {
+    color: #7a3d5a;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.flatpicker-shell {
+    border: 1px solid #eed7e0;
+    border-radius: 18px;
+    padding: 12px;
+    background: #fff;
+    box-shadow: inset 0 0 0 1px rgba(192, 114, 146, 0.05);
+}
+
+.flatpickr-calendar {
+    border-radius: 14px !important;
+    box-shadow: none !important;
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange,
+.flatpickr-day.inRange {
+    background: #c06f90 !important;
+    border-color: #c06f90 !important;
+    color: #fff !important;
+}
+
+.flatpickr-day.disabled {
+    color: #d9b9c4 !important;
+    text-decoration: line-through;
+    background: #f7e8ef !important;
+}
+
+.flatpickr-day:hover {
+    background: #f4d8e3 !important;
+    color: #6d3148 !important;
+}
+
+.calendar-legend {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    font-size: 13px;
+    color: #7a3d5a;
+}
+
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.legend-dot.off {
+    background: #c95a74;
+}
+
+.legend-dot.booked {
+    background: #efc4d6;
+}
+
+.legend-dot.available {
+    background: #7dc9a6;
+}
+
+@media (max-width: 992px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
