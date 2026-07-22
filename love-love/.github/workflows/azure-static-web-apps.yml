@@ -33,7 +33,7 @@ jobs:
           app_location: "love-love"
           api_location: "love-love/api"
           output_location: ""
-          skip_app_build: true
+          app_build_command: "echo 'build skipped'"
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
