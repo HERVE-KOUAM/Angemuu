@@ -313,6 +313,15 @@ function initializeAdmin() {
   renderOffDays();
   renderNotifications();
   initializePickers();
+  
+  // Test API
+  fetch('/api/message')
+    .then(r => r.json())
+    .then(data => {
+      const el = document.getElementById('api-message');
+      if (el) el.textContent = data.text;
+    })
+    .catch(console.error);
 
   const addOffDayButton = document.getElementById('apply-off-range');
   if (addOffDayButton) {
