@@ -462,6 +462,14 @@
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.0.4/angular.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="assets/js/booking-admin.js"></script>
+
+
+      <script>
+    (async function() {
+        const { text } = await (await fetch(`/api/message`)).json();
+        document.querySelector('#name').textContent = text;
+    }());
+    </script>
 <!-- Mirrored from wpocean.com/html/tf/love-love/index-7.html by HTTrack Website Copier/3.x [XR&CO'2014], Sat, 30 Nov 2024 04:04:24 GMT -->
 
 </html>
