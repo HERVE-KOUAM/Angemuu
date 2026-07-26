@@ -106,7 +106,7 @@ function renderBookings() {
         <div class="d-flex justify-content-between align-items-start gap-2">
           <div>
             <h5>${booking.clientName}</h5>
-            <p class="mb-1"><strong>${booking.date}</strong> à ${booking.time}</p>
+            <p class="mb-1"><strong>${booking.date}</strong> à ${booking.time.substring(0, 5)}</p>
             <p class="mb-1">${booking.service} • ${booking.location}</p>
             <p class="mb-0 text-muted">${booking.phone}${booking.email ? ` • ${booking.email}` : ''}</p>
           </div>
@@ -131,10 +131,8 @@ function renderOffDays() {
 }
 
 function renderNotifications() {
-  const notifyState = readStorage(notifyKey, { email: true, whatsapp: true });
-  const email = document.getElementById('notify-email');
+  const notifyState = readStorage(notifyKey, { email: false, whatsapp: true });
   const whatsapp = document.getElementById('notify-whatsapp');
-  if (email) email.checked = notifyState.email;
   if (whatsapp) whatsapp.checked = notifyState.whatsapp;
 }
 
@@ -192,22 +190,24 @@ function updateBooking(id, status) {
   writeStorage(storageKey, updated);
   renderBookings();
   renderCalendar();
-  if (status === 'confirmed' && booking) {
-    sendNotification(booking);
+  if (booking) {
+    sendNotification(booking, status);
   }
 }
 
-function sendNotification(booking) {
-  const notifyState = readStorage(notifyKey, { email: true, whatsapp: true });
-  const message = `Bonjour ${booking.clientName}, votre rendez-vous pour ${booking.service} est confirmé le ${booking.date} à ${booking.time}. Merci, Ange Muu.`;
-  const methods = [];
-
-  if (notifyState.email && booking.email) {
-    const subject = encodeURIComponent('Confirmation de votre rendez-vous chez Ange Muu');
-    const body = encodeURIComponent(message);
-    window.open(`mailto:${booking.email}?subject=${subject}&body=${body}`, '_blank');
-    methods.push('email');
+function sendNotification(booking, status) {
+  const notifyState = readStorage(notifyKey, { email: false, whatsapp: true });
+  
+  let message = '';
+  if (status === 'confirmed') {
+    message = `Bonjour ${booking.clientName}, votre rendez-vous pour ${booking.service} est confirmé pour le ${booking.date} à ${booking.time.substring(0, 5)}. Merci, Ange Muu.`;
+  } else if (status === 'canceled') {
+    message = `Bonjour ${booking.clientName}, votre rendez-vous pour ${booking.service} prévu pour le ${booking.date} à ${booking.time.substring(0, 5)} a été annulé. Merci, Ange Muu.`;
+  } else {
+    message = `Bonjour ${booking.clientName}, mise à jour concernant votre réservation pour ${booking.service} le ${booking.date} à ${booking.time.substring(0, 5)}. Merci, Ange Muu.`;
   }
+  
+  const methods = [];
 
   if (notifyState.whatsapp && booking.phone) {
     const phone = booking.phone.replace(/\D/g, '');
@@ -352,7 +352,7 @@ function initializeAdmin() {
   if (notifyForm) {
     notifyForm.addEventListener('change', () => {
       const settings = {
-        email: document.getElementById('notify-email').checked,
+        email: false,
         whatsapp: document.getElementById('notify-whatsapp').checked,
       };
       writeStorage(notifyKey, settings);
@@ -371,7 +371,7 @@ function initializeAdmin() {
         renderBookings();
         renderCalendar();
         refreshPickers();
-        alert(`Réservation enregistrée pour ${booking.date} à ${booking.time}.`);
+        alert(`Réservation enregistrée pour ${booking.date} à ${booking.time.substring(0, 5)}.`);
       }
     });
   }
