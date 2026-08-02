@@ -60,12 +60,16 @@ function getDisabledDates() {
   return getOffDays().map((day) => parseDateKey(day));
 }
 
-function renderCalendar() {
+async function renderCalendar() {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
   const days = getMonthDates(year, month);
-  const bookings = readStorage(storageKey, []);
+  
+  const { data: bookings, error } = await supabase
+    .from('bookings')
+    .select('date');
+  
   const offDays = getOffDays();
   const calendar = document.getElementById('calendar-grid');
   if (!calendar) return;
@@ -84,7 +88,7 @@ function renderCalendar() {
     const key = formatDateKey(day);
     const isCurrentMonth = day.getMonth() === month;
     const isOff = offDays.includes(key);
-    const isBooked = bookings.some((booking) => booking.date === key);
+    const isBooked = !error && bookings.some((booking) => booking.date === key);
     const isToday = key === formatDateKey(now);
     cell.className = `calendar-cell ${isCurrentMonth ? '' : 'muted'} ${isToday ? 'today' : ''} ${isOff ? 'off-day' : ''} ${isBooked ? 'booked-day' : ''}`;
     cell.innerHTML = `<div class="fw-bold">${day.getDate()}</div>${isOff ? '<span class="calendar-pill off">Jour off</span>' : ''}${isBooked ? '<span class="calendar-pill">RDV</span>' : ''}`;
