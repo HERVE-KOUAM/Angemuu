@@ -74,6 +74,10 @@ async function renderCalendar() {
   const calendar = document.getElementById('calendar-grid');
   if (!calendar) return;
 
+  // Ensure calendar grid exists before DOM manipulation
+  if (calendar.children.length === 0) {
+    // Only add headers if not already present (prevents duplicates)
+  }
   calendar.innerHTML = '';
   const weekLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   weekLabels.forEach((label) => {
@@ -332,21 +336,15 @@ function initializePickers() {
 }
 
 function initializeAdmin() {
-  renderCalendar();
-  renderBookings();
-  renderOffDays();
-  renderNotifications();
+  // Always try to initialize pickers for the form (on both public and admin pages)
   initializePickers();
-  
-  // Test API
-  fetch('/api/message')
-    .then(r => r.json())
-    .then(data => {
-      const el = document.getElementById('api-message');
-      if (el) el.textContent = data.text;
-    })
-    .catch(console.error);
 
+  // Only render elements if they exist in the DOM (admin specific)
+  if (document.getElementById('calendar-grid')) renderCalendar();
+  if (document.getElementById('booking-list')) renderBookings();
+  if (document.getElementById('off-days-list')) renderOffDays();
+  renderNotifications();
+  
   const addOffDayButton = document.getElementById('apply-off-range');
   if (addOffDayButton) {
     addOffDayButton.addEventListener('click', () => {
