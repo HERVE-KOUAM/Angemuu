@@ -1,4 +1,7 @@
-const storageKey = 'ange-muu-bookings';
+const supabaseUrl = 'https://kskjalzggxaycfzfgspc.supabase.co';
+const supabaseKey = 'sb_publishable_yKfW79OSFtVKd5QXDfDsJw_2qciBjoI';
+const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
 const offDaysKey = 'ange-muu-off-days';
 const notifyKey = 'ange-muu-notify';
 let bookingPickerInstance = null;
@@ -90,12 +93,14 @@ function renderCalendar() {
 }
 
 async function renderBookings() {
-  const response = await fetch('/api/bookings');
-  const bookings = await response.json();
+  const { data: bookings, error } = await supabase
+    .from('bookings')
+    .select('*');
+
   const list = document.getElementById('booking-list');
   if (!list) return;
 
-  if (!bookings.length) {
+  if (error || !bookings.length) {
     list.innerHTML = '<div class="booking-card">Aucune réservation pour le moment.</div>';
     return;
   }
@@ -106,7 +111,7 @@ async function renderBookings() {
       <div class="booking-card">
         <div class="d-flex justify-content-between align-items-start gap-2">
           <div>
-            <h5>${booking.clientName}</h5>
+            <h5>${booking.client_name}</h5>
             <p class="mb-1"><strong>${booking.date}</strong> à ${booking.time.substring(0, 5)}</p>
             <p class="mb-1">${booking.service} • ${booking.location}</p>
             <p class="mb-0 text-muted">${booking.phone}${booking.email ? ` • ${booking.email}` : ''}</p>
@@ -184,12 +189,20 @@ function removeOffDay(day) {
   refreshPickers();
 }
 
-function updateBooking(id, status) {
-  const bookings = readStorage(storageKey, []);
-  const booking = bookings.find((item) => item.id === id);
-  const updated = bookings.map((item) => (item.id === id ? { ...item, status } : item));
-  writeStorage(storageKey, updated);
-  renderBookings();
+async function updateBooking(id, status) {
+  const { data: booking, error } = await supabase
+    .from('bookings')
+    .update({ status })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    alert('Erreur lors de la mise à jour.');
+    return;
+  }
+
+  await renderBookings();
   renderCalendar();
   if (booking) {
     sendNotification(booking, status);
@@ -248,30 +261,29 @@ async function saveBooking(formData) {
     return false;
   }
 
-  const booking = {
-    clientName: formData.clientName,
-    phone: formData.phone,
-    email: formData.email || '',
-    date: formData.date,
-    time: formData.time,
-    service: formData.service,
-    location: formData.location,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-  };
+  const { data, error } = await supabase
+    .from('bookings')
+    .insert([
+      {
+        client_name: formData.clientName,
+        phone: formData.phone,
+        email: formData.email || '',
+        date: formData.date,
+        time: formData.time,
+        service: formData.service,
+        location: formData.location,
+        status: 'pending'
+      }
+    ])
+    .select()
+    .single();
 
-  const response = await fetch('/api/bookings', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(booking)
-  });
-  
-  if (response.ok) {
-    return booking;
-  } else {
-    alert('Erreur lors de l\'enregistrement.');
+  if (error) {
+    alert('Erreur lors de l\'enregistrement : ' + error.message);
     return false;
   }
+  
+  return data;
 }
 
 function initializePickers() {
