@@ -1,6 +1,7 @@
 const supabaseUrl = 'https://kskjalzggxaycfzfgspc.supabase.co';
 const supabaseKey = 'sb_publishable_yKfW79OSFtVKd5QXDfDsJw_2qciBjoI';
-const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+// Safely initialize supabase only if not already present
+const supabase = window.supabase ? window.supabase.createClient(supabaseUrl, supabaseKey) : supabase.createClient(supabaseUrl, supabaseKey);
 
 const offDaysKey = 'ange-muu-off-days';
 const notifyKey = 'ange-muu-notify';
