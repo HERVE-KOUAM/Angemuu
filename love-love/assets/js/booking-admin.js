@@ -89,8 +89,9 @@ function renderCalendar() {
   });
 }
 
-function renderBookings() {
-  const bookings = readStorage(storageKey, []);
+async function renderBookings() {
+  const response = await fetch('/api/bookings');
+  const bookings = await response.json();
   const list = document.getElementById('booking-list');
   if (!list) return;
 
@@ -233,8 +234,7 @@ function notifyBooking(id) {
   sendNotification(booking);
 }
 
-function saveBooking(formData) {
-  const bookings = readStorage(storageKey, []);
+async function saveBooking(formData) {
   const compulsoryFields = ['clientName', 'phone', 'date', 'time', 'service', 'location'];
   const missing = compulsoryFields.filter((field) => !formData[field]);
   if (missing.length) {
@@ -249,7 +249,6 @@ function saveBooking(formData) {
   }
 
   const booking = {
-    id: `booking-${Date.now()}`,
     clientName: formData.clientName,
     phone: formData.phone,
     email: formData.email || '',
@@ -261,9 +260,18 @@ function saveBooking(formData) {
     createdAt: new Date().toISOString(),
   };
 
-  bookings.push(booking);
-  writeStorage(storageKey, bookings);
-  return booking;
+  const response = await fetch('/api/saveBooking', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(booking)
+  });
+  
+  if (response.ok) {
+    return booking;
+  } else {
+    alert('Erreur lors de l\'enregistrement.');
+    return false;
+  }
 }
 
 function initializePickers() {
@@ -361,14 +369,14 @@ function initializeAdmin() {
 
   const bookingForm = document.getElementById('booking-form');
   if (bookingForm) {
-    bookingForm.addEventListener('submit', (event) => {
+    bookingForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const formData = Object.fromEntries(new FormData(bookingForm).entries());
-      const booking = saveBooking(formData);
+      const booking = await saveBooking(formData);
       if (booking) {
         bookingForm.reset();
         if (bookingPickerInstance) bookingPickerInstance.clear();
-        renderBookings();
+        await renderBookings();
         renderCalendar();
         refreshPickers();
         alert(`Réservation enregistrée pour ${booking.date} à ${booking.time.substring(0, 5)}.`);
