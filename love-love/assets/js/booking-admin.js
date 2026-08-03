@@ -1,7 +1,9 @@
-const supabaseUrl = 'https://kskjalzggxaycfzfgspc.supabase.co';
-const supabaseKey = 'sb_publishable_yKfW79OSFtVKd5QXDfDsJw_2qciBjoI';
-// Safely initialize supabase only if not already present
-const supabase = window.supabase ? window.supabase.createClient(supabaseUrl, supabaseKey) : supabase.createClient(supabaseUrl, supabaseKey);
+// Use the global window.supabase object directly or initialize if not available
+function getSupabaseClient() {
+  const supabaseUrl = 'https://kskjalzggxaycfzfgspc.supabase.co';
+  const supabaseKey = 'sb_publishable_yKfW79OSFtVKd5QXDfDsJw_2qciBjoI';
+  return window.supabase ? window.supabase.createClient(supabaseUrl, supabaseKey) : supabase.createClient(supabaseUrl, supabaseKey);
+}
 
 const offDaysKey = 'ange-muu-off-days';
 const notifyKey = 'ange-muu-notify';
@@ -67,7 +69,7 @@ async function renderCalendar() {
   const month = now.getMonth();
   const days = getMonthDates(year, month);
   
-  const { data: bookings, error } = await supabase
+  const { data: bookings, error } = await getSupabaseClient()
     .from('bookings')
     .select('date');
   
@@ -102,7 +104,7 @@ async function renderCalendar() {
 }
 
 async function renderBookings() {
-  const { data: bookings, error } = await supabase
+  const { data: bookings, error } = await getSupabaseClient()
     .from('bookings')
     .select('*');
 
@@ -199,7 +201,7 @@ function removeOffDay(day) {
 }
 
 async function updateBooking(id, status) {
-  const { data: booking, error } = await supabase
+  const { data: booking, error } = await getSupabaseClient()
     .from('bookings')
     .update({ status })
     .eq('id', id)
@@ -270,7 +272,7 @@ async function saveBooking(formData) {
     return false;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabaseClient()
     .from('bookings')
     .insert([
       {
