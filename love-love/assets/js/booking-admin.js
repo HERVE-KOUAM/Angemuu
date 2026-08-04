@@ -235,7 +235,8 @@ function sendNotification(booking, status) {
   const methods = [];
 
   if (notifyState.whatsapp && booking.phone) {
-    const phone = booking.phone.replace(/\D/g, '');
+    // Nettoyer pour ne garder que les chiffres, en s'assurant que le + est géré si présent au début
+    const phone = booking.phone.replace(/[^0-9]/g, '');
     if (phone) {
       const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank');
@@ -259,7 +260,7 @@ function notifyBooking(id) {
 }
 
 async function saveBooking(formData) {
-  const compulsoryFields = ['clientName', 'phone', 'date', 'time', 'service', 'location'];
+  const compulsoryFields = ['clientName', 'phonePrefix', 'phoneNumber', 'date', 'time', 'service', 'location'];
   const missing = compulsoryFields.filter((field) => !formData[field]);
   if (missing.length) {
     alert('Veuillez remplir tous les champs requis.');
@@ -272,12 +273,15 @@ async function saveBooking(formData) {
     return false;
   }
 
+  // Fusionner préfixe et numéro, enlever les espaces ou '+' si nécessaire pour le format standard
+  const fullPhone = `${formData.phonePrefix}${formData.phoneNumber}`.replace(/\s+/g, '');
+
   const { data, error } = await getSupabaseClient()
     .from('bookings')
     .insert([
       {
         client_name: formData.clientName,
-        phone: formData.phone,
+        phone: fullPhone, // Enregistre le numéro complet et propre
         email: formData.email || '',
         date: formData.date,
         time: formData.time,

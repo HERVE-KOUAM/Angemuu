@@ -248,7 +248,21 @@
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label">Téléphone</label>
-                                                <input type="text" class="form-control" name="phone" required>
+                                                <div class="input-group">
+                                                    <select class="form-select" name="phonePrefix" style="max-width: 150px;" required>
+                                                        <option value="+237" selected>Cameroun (+237)</option>
+                                                        <option value="+33">France (+33)</option>
+                                                        <option value="+1">USA/Canada (+1)</option>
+                                                        <option value="+241">Gabon (+241)</option>
+                                                        <option value="+225">Côte d'Ivoire (+225)</option>
+                                                        <option value="+221">Sénégal (+221)</option>
+                                                        <option value="+242">Congo (+242)</option>
+                                                        <option value="+32">Belgique (+32)</option>
+                                                        <option value="+41">Suisse (+41)</option>
+                                                        <option value="+49">Allemagne (+49)</option>
+                                                    </select>
+                                                    <input type="text" class="form-control" name="phoneNumber" placeholder="6XXXXXXXX" required>
+                                                </div>
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label">Date</label>
