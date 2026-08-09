@@ -400,6 +400,20 @@ function initializeAdmin() {
         await renderBookings();
         renderCalendar();
         refreshPickers();
+        
+        // WhatsApp link construction
+        const phone = '237656142787';
+        const message = `Bonjour Ange Muu, voici ma demande de rendez-vous :
+- Nom : ${formData.clientName}
+- Date : ${formData.date}
+- Heure : ${formData.time}
+- Service : ${formData.service}
+- Lieu : ${formData.location}
+${formData.comment ? `- Commentaire : ${formData.comment}` : ''}`;
+        
+        const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+
         alert(`Réservation enregistrée pour ${booking.date} à ${booking.time.substring(0, 5)}.`);
       }
     });
