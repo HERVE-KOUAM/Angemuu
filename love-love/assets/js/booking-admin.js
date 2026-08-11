@@ -133,6 +133,7 @@ async function renderBookings() {
           <button class="action-chip" data-action="confirm" data-id="${booking.id}">Confirmer</button>
           <button class="action-chip" data-action="cancel" data-id="${booking.id}">Annuler</button>
           <button class="action-chip" data-action="notify" data-id="${booking.id}">Notifier</button>
+          <button class="action-chip btn-danger" data-action="delete" data-id="${booking.id}">Supprimer</button>
         </div>
       </div>
     `).join('');
@@ -198,6 +199,23 @@ function removeOffDay(day) {
   renderOffDays();
   renderCalendar();
   refreshPickers();
+}
+
+async function deleteBooking(id) {
+  if (!confirm('Voulez-vous vraiment supprimer ce rendez-vous ?')) return;
+
+  const { error } = await getSupabaseClient()
+    .from('bookings')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    alert('Erreur lors de la suppression.');
+    return;
+  }
+
+  await renderBookings();
+  renderCalendar();
 }
 
 async function updateBooking(id, status) {
@@ -371,6 +389,7 @@ function initializeAdmin() {
       if (type === 'confirm') updateBooking(id, 'confirmed');
       if (type === 'cancel') updateBooking(id, 'canceled');
       if (type === 'notify') notifyBooking(id);
+      if (type === 'delete') deleteBooking(id);
     }
     if (removeDay) {
       removeOffDay(removeDay.getAttribute('data-remove-day'));
