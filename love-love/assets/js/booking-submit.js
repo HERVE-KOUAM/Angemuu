@@ -24,7 +24,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Insertion dans Supabase
+            // --- TENTATIVE D'INSERTION SUPABASE ---
+            let dbError = null;
             if (typeof window.supabaseClient !== 'undefined') {
                 const { error } = await window.supabaseClient.from('bookings')
                     .insert([{
@@ -37,19 +38,16 @@ document.addEventListener('DOMContentLoaded', function() {
                         location: location,
                         status: 'pending'
                     }]);
-
+                
                 if (error) {
                     console.error('Erreur Supabase :', error);
-                    alert('Erreur lors de l\\'enregistrement : ' + error.message);
-                    return;
+                    dbError = error.message;
                 }
             } else {
-                console.error('supabaseClient non défini !');
-                alert('Erreur technique.');
-                return;
+                dbError = 'supabaseClient non défini';
             }
 
-            // Construction du message WhatsApp
+            // --- CONSTRUCTION DU MESSAGE WHATSAPP ---
             const message = '*NOUVELLE RÉSERVATION — Ange Muu*\n' +
                             '─────────────────────────────\n' +
                             '*Nom :* ' + clientName + '\n' +
@@ -65,10 +63,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const numeroWhatsApp = '237656142787';
             const url = 'https://wa.me/' + numeroWhatsApp + '?text=' + encodeURIComponent(message);
             
-            // Redirection
+            // --- REDIRECTION ET FEEDBACK ---
+            if (dbError) {
+                alert('⚠️ Votre réservation a été transmise par WhatsApp, mais une erreur technique a empêché l\'enregistrement dans notre base de données (Erreur: ' + dbError + ').');
+            } else {
+                alert('✅ Votre réservation a bien été enregistrée et transmise !');
+                bookingForm.reset();
+            }
+
+            // Redirection toujours exécutée
             window.open(url, '_blank');
-            bookingForm.reset();
-            alert('Votre réservation a bien été enregistrée et transmise !');
         });
     }
 });
