@@ -480,6 +480,12 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="assets/js/booking-admin.js"></script>
     <script>
+  flatpickr("#booking-date-picker", {
+    locale: "fr",
+    // vos options...
+  });
+</script>
+    <script>
   document.addEventListener("DOMContentLoaded", function () {
     // Initialisation de Flatpickr sur le conteneur inline ou le champ de saisie
     flatpickr("#booking-date-picker", {
