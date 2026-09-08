@@ -26,8 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Insertion dans Supabase
             if (typeof window.supabaseClient !== 'undefined') {
-                const { error } = await supabaseClient
-                    window.supabaseClient.from('bookings')
+                const { error } = await window.supabaseClient.from('bookings')
                     .insert([{
                         client_name: clientName,
                         phone: phone,
