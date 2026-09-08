@@ -2,4 +2,4 @@ User-agent: *
 Disallow: /admin/
 Allow: /
 
-Sitemap: https://votre-site.azurestaticapps.net/sitemap.xml
+Sitemap: https://angemuu.com/sitemap.xml
