@@ -28,6 +28,8 @@ let selectedOffDates = [];
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+    initCalendars(); // Initialiser les calendriers sur toutes les pages
+
     const isAdminPage = window.location.pathname.includes('/admin/') || document.getElementById('admin-content');
 
     if (isAdminPage) {
@@ -196,7 +198,12 @@ function showAdmin() {
 // ============================================================
 
 function initCalendars() {
-    const localeFr = flatpickr.l10ns.fr || 'default';
+    // Vérifier si Flatpickr est chargé
+    if (typeof flatpickr === 'undefined') {
+        console.error('Flatpickr n\'est pas chargé !');
+        return;
+    }
+    const localeFr = (flatpickr.l10ns && flatpickr.l10ns.fr) ? flatpickr.l10ns.fr : 'default';
 
     // 1. Calendrier principal "Mois en cours"
     if (document.getElementById('calendar-grid')) {
