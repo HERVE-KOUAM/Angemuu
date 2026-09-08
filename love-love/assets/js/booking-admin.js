@@ -230,6 +230,7 @@ function initCalendars() {
             inline: true,
             locale: localeFr,
             dateFormat: 'Y-m-d',
+            minDate: 'today',
             onChange: function(selectedDates, dateStr) {
                 const input = document.getElementById('booking-date-input');
                 if (input) input.value = dateStr;
