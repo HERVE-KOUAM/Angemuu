@@ -1,16 +1,22 @@
 {
   "routes": [
     {
-      "route": "/admin/*",
-      "allowedRoles": ["authenticated"]
+      "route": "/admin*",
+      "allowedRoles": ["admin"]
     }
   ],
+
   "responseOverrides": {
     "401": {
-      "redirect": "/.auth/login/github",
-      "statusCode": 302
+      "statusCode": 302,
+      "redirect": "/.auth/login/aad"
+    },
+    "403": {
+      "statusCode": 403,
+      "rewrite": "/403.html"
     }
   },
+
   "globalHeaders": {
     "Content-Security-Policy": "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; connect-src 'self' https://kskjalzggxaycfzfgspc.supabase.co wss://kskjalzggxaycfzfgspc.supabase.co; img-src 'self' data:; font-src 'self';"
   }
