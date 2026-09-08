@@ -272,7 +272,7 @@
                                                 </div>
                                                 
                                             </div>
-                                            <div class="mb-3">z
+                                            <div class="mb-3">
                                                 <label class="form-label">Heure</label>
                                                 <input type="time" class="form-control" name="time" required step="60">
                                             </div>
@@ -479,7 +479,21 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="assets/js/booking-admin.js"></script>
-
+    <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Initialisation de Flatpickr sur le conteneur inline ou le champ de saisie
+    flatpickr("#booking-date-picker", {
+      inline: true,
+      minDate: "today",
+      dateFormat: "Y-m-d",
+      onChange: function(selectedDates, dateStr, instance) {
+        // Met à jour la valeur dans le champ hidden/input de la date
+        document.getElementById("booking-date-input").value = dateStr;
+      }
+    });
+  });
+</script>
+</body>
 
 
 <!-- Mirrored from wpocean.com/html/tf/love-love/index.html by HTTrack Website Copier/3.x [XR&CO'2014], Sat, 30 Nov 2024 04:04:24 GMT -->
