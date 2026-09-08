@@ -9,7 +9,10 @@
     <link rel="stylesheet" href="../assets/css/booking.css">
 </head>
 <body style="background:#fffafc;">
-    <div class="container py-5">
+
+<div id="admin-content" style="display: none;">
+    <!-- Le contenu de votre dashboard admin ici -->
+     <div class="container py-5">
         <div class="admin-nav">
             <a href="../index.html">← Retour au site</a>
             <a href="#" onclick="window.location.reload()">Actualiser</a>
@@ -126,8 +129,16 @@
             </div>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<!-- AJOUT DE LA TRADUCTION FRANÇAISE -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script> 
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../assets/js/booking-admin.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../assets/js/booking-admin.js"></script>
 </body>
