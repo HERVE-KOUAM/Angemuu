@@ -1,0 +1,65 @@
+:root {
+  --cols: 12;
+  --bl: 8px;            /* baseline */
+  --lh: 24px;           /* 3 x baseline */
+  --gutter: 24px;
+  --margin: 72px;
+  --maxw: 1296px;
+
+  --paper: #ffffff;
+  --ink: #111315;
+  --accent: #e4002b;
+}
+
+.blog-wrap {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 var(--margin);
+}
+
+.blog-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  column-gap: var(--gutter);
+  row-gap: var(--lh);
+}
+
+.band {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  column-gap: var(--gutter);
+}
+
+@supports not (grid-template-columns: subgrid) {
+  .band {
+    grid-template-columns: repeat(var(--cols), 1fr);
+  }
+}
+
+/* Blog Specific Enhancements to Müller-Brockmann Grid */
+.blog-content h2, .blog-content h3 {
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: var(--lh);
+}
+
+.blog-content p {
+  margin-bottom: var(--lh);
+}
+
+.comment {
+  border-top: 1px solid #ccc;
+  padding: var(--bl) 0;
+}
+
+.comment-icon {
+  width: 40px;
+  height: 40px;
+  background: #eee;
+  border-radius: 50%;
+  display: inline-block;
+  text-align: center;
+  line-height: 40px;
+  margin-right: 10px;
+}

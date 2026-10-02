@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Blog | Ange Muu</title>
+    <link href="assets/css/bootstrap.min.css" rel="stylesheet">
+    <link href="assets/css/style.css" rel="stylesheet">
+    <link href="assets/css/blog.css" rel="stylesheet">
+</head>
+<body>
+    <div class="page-wrapper">
+        <div class="blog-wrap">
+            <div class="blog-grid">
+                <!-- Header placeholder (simplified) -->
+                <header class="band" style="grid-column: 1 / -1; margin-bottom: var(--lh);">
+                    <h1>Le Blog d'Ange Muu</h1>
+                </header>
+
+                <!-- Blog Content -->
+                <main class="band" style="grid-column: 1 / 9;">
+                    <article>
+                        <h2>Nos conseils capillaires</h2>
+                        <p>...</p>
+                    </article>
+                    
+                    <!-- Comments Section -->
+                    <section id="comments-section" style="margin-top: var(--lh);">
+                        <h3>Commentaires</h3>
+                        <div id="comments-list"></div>
+                        <form id="comment-form" style="margin-top: var(--lh);">
+                            <input type="text" id="comment-name" placeholder="Votre nom" required>
+                            <textarea id="comment-text" placeholder="Votre commentaire" required></textarea>
+                            <button type="submit">Poster</button>
+                        </form>
+                    </section>
+                </main>
+            </div>
+        </div>
+    </div>
+    <script src="assets/js/jquery.min.js"></script>
+    <script src="assets/js/blog-comments.js"></script>
+</body>
+</html>
