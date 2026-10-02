@@ -42,24 +42,51 @@
   font-weight: 700;
   text-transform: uppercase;
   margin-bottom: var(--lh);
+  color: #5f3854; /* Harmonized with booking style */
 }
 
 .blog-content p {
   margin-bottom: var(--lh);
+  font-size: 18px;
+  line-height: calc(var(--lh) * 1.5);
+  color: #444;
 }
 
 .comment {
-  border-top: 1px solid #ccc;
+  border-top: 1px solid #f0dce3;
   padding: var(--bl) 0;
+  margin-bottom: var(--bl);
 }
 
 .comment-icon {
   width: 40px;
   height: 40px;
-  background: #eee;
+  background: #f7e8ef;
   border-radius: 50%;
-  display: inline-block;
-  text-align: center;
-  line-height: 40px;
-  margin-right: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 15px;
+  font-size: 20px;
+}
+
+/* Aligning with the provided model's aesthetic */
+.theme-btn {
+    background: #c06f90;
+    color: #fff;
+    border-radius: 999px;
+    padding: 12px 28px;
+    border: none;
+    transition: 0.3s;
+}
+
+.theme-btn:hover {
+    background: #5f3854;
+}
+
+#comment-form input, #comment-form textarea, #comment-form select {
+    border-radius: 14px;
+    border: 1px solid #e8d2da;
+    padding: 10px 14px;
+    width: 100%;
 }
