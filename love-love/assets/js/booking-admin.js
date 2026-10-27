@@ -190,6 +190,7 @@ function showAdmin() {
 
     renderBookings();
     initCalendars();
+    loadOffDays();
 }
 
 
@@ -231,18 +232,9 @@ function initCalendars() {
         });
     }
 
-    // 3. Sélecteur de date dans le formulaire de création
+    // 3. Sélecteur de date du formulaire public de réservation
     if (document.getElementById('booking-date-picker')) {
-        flatpickr('#booking-date-picker', {
-            inline: true,
-            locale: localeFr,
-            dateFormat: 'Y-m-d',
-            minDate: 'today',
-            onChange: function(selectedDates, dateStr) {
-                const input = document.getElementById('booking-date-input');
-                if (input) input.value = dateStr;
-            }
-        });
+        initPublicDatePicker(localeFr);
     }
 
     // Bouton d'enregistrement d'intervalle de jours off
@@ -254,30 +246,133 @@ function initCalendars() {
 
 
 // ============================================================
-// ENREGISTRER UN INTERVALLE DE JOURS OFF
+// DATE PICKER PUBLIC : jours off désactivés depuis Supabase
 // ============================================================
 
-function saveOffRange() {
+async function initPublicDatePicker(localeFr) {
+    let disabledDates = [];
+
+    try {
+        const { data: offDays, error } = await supabaseClient
+            .from('off_days')
+            .select('off_date');
+
+        if (error) {
+            console.error('Erreur chargement off_days:', error);
+        } else if (offDays) {
+            disabledDates = offDays.map(d => d.off_date);
+        }
+    } catch (e) {
+        console.error('Erreur chargement off_days:', e);
+    }
+
+    flatpickr('#booking-date-picker', {
+        inline: true,
+        locale: localeFr,
+        dateFormat: 'Y-m-d',
+        minDate: 'today',
+        disable: disabledDates,
+        onChange: function(selectedDates, dateStr) {
+            const input = document.getElementById('booking-date-input');
+            if (input) input.value = dateStr;
+        }
+    });
+}
+
+
+// ============================================================
+// ENREGISTRER UN INTERVALLE DE JOURS OFF (persisté dans Supabase)
+// ============================================================
+
+function formatDateLocal(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+async function saveOffRange() {
     if (selectedOffDates.length === 0) {
         alert('Veuillez sélectionner au moins une date.');
         return;
     }
 
+    // Conversion locale (évite le décalage de fuseau de toISOString)
+    const rows = selectedOffDates.map(date => ({
+        off_date: formatDateLocal(date)
+    }));
+
+    const { error } = await supabaseClient
+        .from('off_days')
+        .upsert(rows, { onConflict: 'off_date' });
+
+    if (error) {
+        console.error('Erreur Supabase off_days:', error);
+        alert("⚠️ Impossible d'enregistrer les jours off : " + error.message);
+        return;
+    }
+
+    // Réinitialiser la sélection et recharger la liste
+    selectedOffDates = [];
+    const summary = document.getElementById('off-range-summary');
+    if (summary) summary.textContent = 'Sélectionnez une plage de jours off.';
+
+    await loadOffDays();
+}
+
+
+// ============================================================
+// CHARGER LES JOURS OFF DEPUIS SUPABASE
+// ============================================================
+
+async function loadOffDays() {
     const list = document.getElementById('off-days-list');
     if (!list) return;
 
-    selectedOffDates.forEach(date => {
-        const formattedDate = date.toISOString().split('T')[0];
-        const li = document.createElement('li');
-        li.className = 'list-group-item d-flex justify-content-between align-items-center';
-        li.innerHTML = `
-            <span>${formattedDate}</span>
-            <button class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">Supprimer</button>
-        `;
-        list.appendChild(li);
-    });
+    const { data: offDays, error } = await supabaseClient
+        .from('off_days')
+        .select('id, off_date')
+        .order('off_date', { ascending: true });
 
-    alert('Jours off enregistrés localement.');
+    if (error) {
+        console.error('Erreur Supabase off_days:', error);
+        list.innerHTML = '<li class="list-group-item text-muted">Impossible de charger les jours off.</li>';
+        return;
+    }
+
+    if (!offDays || offDays.length === 0) {
+        list.innerHTML = '<li class="list-group-item text-muted">Aucun jour off enregistré.</li>';
+        return;
+    }
+
+    list.innerHTML = offDays.map(day => `
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>${escapeHtml(day.off_date)}</span>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteOffDay('${day.id}')">Supprimer</button>
+        </li>
+    `).join('');
+}
+
+
+// ============================================================
+// SUPPRIMER UN JOUR OFF
+// ============================================================
+
+async function deleteOffDay(id) {
+    if (!confirm('Supprimer ce jour off ?')) return;
+
+    const { error } = await supabaseClient
+        .from('off_days')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+        console.error('Erreur Supabase off_days:', error);
+        alert('Impossible de supprimer le jour off : ' + error.message);
+        return;
+    }
+
+    await loadOffDays();
 }
 
 

@@ -24,6 +24,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            // --- VÉRIFICATION ANTI DOUBLE RÉSERVATION ---
+            // Utilise la RPC is_slot_taken : seul accès public autorisé par les RLS,
+            // sans jamais exposer les données des réservations.
+            // ponytail: check-then-act = race condition possible si deux soumissions
+            // simultanées sur le même créneau. Plafond connu ; correctif définitif :
+            // contrainte UNIQUE (date, time) partielle en base.
+            if (typeof window.supabaseClient !== 'undefined') {
+                const { data: slotTaken, error: checkError } = await window.supabaseClient
+                    .rpc('is_slot_taken', { p_date: date, p_time: time });
+
+                if (checkError) {
+                    console.error('Erreur vérification Supabase :', checkError);
+                } else if (slotTaken) {
+                    alert('❌ Ce créneau (date et heure) est déjà réservé. Veuillez choisir un autre créneau.');
+                    return;
+                }
+            }
+
             // --- TENTATIVE D'INSERTION SUPABASE ---
             let dbError = null;
             if (typeof window.supabaseClient !== 'undefined') {
