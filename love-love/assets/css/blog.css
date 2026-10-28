@@ -1,4 +1,13 @@
+/* ============================================================
+   BLOG ANGE MUU — Système éditorial minimaliste
+   Grille modulaire Müller-Brockmann : 12 colonnes, baseline 8px.
+   Typographie : Jost (géométrique) + monallesia (script) —
+   cohérentes avec l'identité du site (assets/sass/style.css).
+   Palette : ivoire / pourpre profond / rose accent.
+   ============================================================ */
+
 :root {
+  /* Grille — source de vérité unique */
   --cols: 12;
   --bl: 8px;            /* baseline */
   --lh: 24px;           /* 3 x baseline */
@@ -6,10 +15,47 @@
   --margin: 72px;
   --maxw: 1296px;
 
-  --paper: #ffffff;
-  --ink: #111315;
-  --accent: #e4002b;
+  /* Palette Ange Muu (déclarée ici, consommée par les pages) */
+  --paper: #fffafc;          /* ivoire rosé */
+  --ink: #5f3854;            /* pourpre profond */
+  --accent: #c06f90;         /* rose salon */
+  --muted: #9a8a92;
+  --line: #f0dce3;
+
+  /* Typographie */
+  --font-display: "Jost", "Helvetica Neue", sans-serif;
+  --font-script: "monallesia", cursive;
 }
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+}
+
+::selection {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ------------------------------------------------------------
+   Conteneur + grille
+   ------------------------------------------------------------ */
 
 .blog-wrap {
   max-width: var(--maxw);
@@ -29,6 +75,7 @@
   display: grid;
   grid-template-columns: subgrid;
   column-gap: var(--gutter);
+  align-items: start;
 }
 
 @supports not (grid-template-columns: subgrid) {
@@ -37,56 +84,238 @@
   }
 }
 
-/* Blog Specific Enhancements to Müller-Brockmann Grid */
-.blog-content h2, .blog-content h3 {
-  font-weight: 700;
+/* ------------------------------------------------------------
+   Sculpture typographique — hiérarchie par échelle et graisse
+   ------------------------------------------------------------ */
+
+.header-kicker {
   text-transform: uppercase;
-  margin-bottom: var(--lh);
-  color: #5f3854; /* Harmonized with booking style */
+  letter-spacing: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 0;
+}
+
+.display-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(40px, 6vw, 64px);
+  line-height: 1.05;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+  margin: 0;
+}
+
+.display-title .soft {
+  font-family: var(--font-script);
+  font-weight: 400;
+  font-size: 1.35em;
+  color: var(--accent);
+  letter-spacing: 0;
+}
+
+.lede {
+  font-size: 17px;
+  line-height: calc(var(--lh) * 1.5);
+  color: #6b5f66;
+}
+
+/* ------------------------------------------------------------
+   Listing — une rangée éditoriale par article
+   ------------------------------------------------------------ */
+
+.post-row {
+  border-top: 1px solid var(--line);
+  padding: calc(var(--bl) * 4) 0;
+}
+
+.post-num {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.post-meta {
+  margin: 0 0 var(--bl);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+}
+
+.post-title {
+  margin: 0;
+  font-size: clamp(19px, 1.6vw, 24px);
+  line-height: 1.3;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.post-title a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.post-title a:hover {
+  color: var(--accent);
+}
+
+.post-excerpt {
+  margin: 0;
+  font-size: 15px;
+  line-height: calc(var(--lh) * 1.25);
+  color: #6b5f66;
+}
+
+.post-thumb {
+  width: 100%;
+  height: 104px;
+  object-fit: cover;
+  display: block;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.post-read {
+  margin: var(--bl) 0 0;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--muted);
+  text-align: right;
+}
+
+/* ------------------------------------------------------------
+   Page article
+   ------------------------------------------------------------ */
+
+.article-kicker {
+  margin: 0 0 16px;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+}
+
+.article-title {
+  font-weight: 800;
+  font-size: clamp(30px, 4.2vw, 46px);
+  line-height: 1.15;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+  margin: 0;
+}
+
+.article-hero {
+  width: 100%;
+  height: clamp(280px, 38vw, 460px);
+  object-fit: cover;
+  display: block;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.blog-content h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  line-height: var(--lh);
+  margin: 0 0 var(--lh);
+  color: var(--ink);
 }
 
 .blog-content p {
-  margin-bottom: var(--lh);
-  font-size: 18px;
+  margin: 0 0 var(--lh);
+  font-size: 17px;
   line-height: calc(var(--lh) * 1.5);
-  color: #444;
+  color: #52474d;
 }
 
-.comment {
-  border-top: 1px solid #f0dce3;
-  padding: var(--bl) 0;
-  margin-bottom: var(--bl);
+.blog-content a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-.comment-icon {
-  width: 40px;
-  height: 40px;
-  background: #f7e8ef;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 15px;
-  font-size: 20px;
+.back-link {
+  display: inline-block;
+  margin-top: calc(var(--bl) * 3);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--accent);
 }
 
-/* Aligning with the provided model's aesthetic */
-.theme-btn {
-    background: #c06f90;
-    color: #fff;
-    border-radius: 999px;
-    padding: 12px 28px;
-    border: none;
-    transition: 0.3s;
+/* ------------------------------------------------------------
+   Navigation + pied de page
+   ------------------------------------------------------------ */
+
+.site-head {
+  border-bottom: 1px solid var(--line);
 }
 
-.theme-btn:hover {
-    background: #5f3854;
+.brand-link {
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-size: 13px;
+  text-decoration: none;
+  color: var(--ink);
 }
 
-#comment-form input, #comment-form textarea, #comment-form select {
-    border-radius: 14px;
-    border: 1px solid #e8d2da;
-    padding: 10px 14px;
-    width: 100%;
+.brand-link .alt {
+  font-family: var(--font-script);
+  text-transform: none;
+  font-size: 1.2em;
+  color: var(--accent);
+  letter-spacing: 0;
+}
+
+.nav-cta {
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-decoration: none;
+  color: var(--ink);
+  transition: color 0.2s ease;
+}
+
+.nav-cta:hover {
+  color: var(--accent);
+}
+
+.site-foot {
+  border-top: 1px solid var(--line);
+}
+
+.foot-note {
+  padding: var(--bl) 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------
+   Responsive — vérifié sous le max-width
+   ------------------------------------------------------------ */
+
+@media (max-width: 1100px) {
+  :root {
+    --margin: 48px;
+  }
+
+  .post-row > .post-body { grid-column: 2 / 13 !important; }
+  .post-row > .post-thumb-box { grid-column: 2 / 13 !important; text-align: left !important; }
+  .post-row > .post-thumb { height: 200px; }
+}
+
+@media (max-width: 720px) {
+  :root {
+    --margin: 20px;
+    --gutter: 16px;
+  }
+
+  .post-thumb { display: none; }
 }

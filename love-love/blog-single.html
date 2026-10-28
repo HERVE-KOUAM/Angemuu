@@ -3,66 +3,94 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Découvrez comment réussir votre transition capillaire vers le naturel tout en conservant une allure sophistiquée et professionnelle au quotidien à Yaoundé.">
-    <title>Le guide ultime pour passer aux cheveux 100% naturels - Ange Muu</title>
-    
-    <!-- CSS existants -->
-    <link href="assets/css/bootstrap.min.css" rel="stylesheet">
-    <link href="assets/css/font-awesome.min.css" rel="stylesheet">
-    <link href="assets/css/themify-icons.css" rel="stylesheet">
-    <link href="assets/sass/style.css" rel="stylesheet">
-    <!-- Grid Müller-Brockmann -->
+    <meta name="description" content="Article du blog d'Ange Muu : conseils et tendances sur les tresses et coiffures afro-américaines à Yaoundé.">
+    <title>Article — Ange Muu</title>
+
+    <!-- Grid Müller-Brockmann + identité Ange Muu -->
     <link href="assets/css/blog.css" rel="stylesheet">
 </head>
 <body>
     <div class="page-wrapper">
-        <header>
-            <div class="wpo-site-header wpo-header-style-4">
-                <nav class="navigation navbar navbar-expand-lg">
-                    <div class="container-fluid">
-                        <a class="navbar-brand" href="index.html">Ange Muu</a>
-                    </div>
+
+        <header class="site-head">
+            <div class="blog-wrap">
+                <nav class="band" style="padding: 24px 0 8px;">
+                    <span style="grid-column: 1 / 4;">
+                        <a class="brand-link" href="index.html">Ange <span class="alt">Muu</span></a>
+                    </span>
+                    <span style="grid-column: 10 / 13; text-align: right;">
+                        <a class="nav-cta" href="blog.html">← Le blog</a>
+                    </span>
                 </nav>
             </div>
         </header>
 
-        <main class="blog-wrap" style="padding-top: 100px; padding-bottom: 100px;">
+        <main class="blog-wrap" style="padding-top: 64px; padding-bottom: 120px;" id="article-root">
             <div class="blog-grid">
-                
-                <header class="band" style="grid-column: 1 / 13; margin-bottom: 40px; text-align: center;">
-                    <span style="color: #c06f90; text-transform: uppercase; letter-spacing: 2px;">Conseils & Tendances - 1er Octobre 2026</span>
-                    <h1 style="margin-top: 10px; color: #5f3854;">Le guide ultime pour passer aux cheveux 100% naturels tout en restant ultra-élégante au bureau</h1>
-                </header>
-                
-                <article class="band blog-content" style="grid-column: 2 / 12;">
-                    <!-- IMAGE PLACEHOLDER -->
-                    <div style="margin-bottom: var(--lh); border-radius: 20px; overflow: hidden; background: #eee; height: 400px; display: flex; align-items: center; justify-content: center;">
-                        [IMAGE : Portrait professionnel d'une femme avec une coiffure de transition élégante, style studio]
-                    </div>
-                    
-                    <div style="max-width: 800px; margin: 0 auto;">
-                        <h3>I. Introduction</h3>
-                        <p>Avez-vous déjà ressenti cette hésitation en vous regardant dans le miroir le matin ? Ce moment précis où vous désirez ardemment retrouver la beauté authentique de vos cheveux naturels, mais où une voix intérieure vous murmure : « Sera-t-il possible d'avoir une allure tirée à quatre épingles pour mes réunions importantes à Yaoundé ? »</p>
-
-                <section class="band" id="comments-section" style="grid-column: 1 / 9;">
-                    <h3>Commentaires</h3>
-                    <div id="comments-list"></div>
-                    <form id="comment-form" style="margin-top: var(--lh);">
-                        <input type="text" id="comment-name" placeholder="Votre nom" required style="width: 100%; margin-bottom: var(--bl);">
-                        <select id="comment-icon" style="margin-bottom: var(--bl);">
-                            <option value="">Pas d'icône</option>
-                            <option value="✂️">✂️</option>
-                            <option value="✨">✨</option>
-                            <option value="💄">💄</option>
-                        </select>
-                        <textarea id="comment-text" placeholder="Votre commentaire" required style="width: 100%; margin-bottom: var(--bl);"></textarea>
-                        <button type="submit" class="theme-btn">Poster le commentaire</button>
-                    </form>
-                </section>
+                <p class="lede" style="grid-column: 1 / 13;">Chargement de l'article…</p>
             </div>
         </main>
+
+        <footer class="site-foot">
+            <div class="blog-wrap">
+                <div class="blog-grid">
+                    <p class="foot-note" style="grid-column: 1 / 13; padding: 16px 0 24px;">
+                        © 2026 <a href="index.html" style="text-decoration: none;">Ange Muu</a> — Salon de coiffure, Yaoundé. Tous droits réservés.
+                    </p>
+                </div>
+            </div>
+        </footer>
     </div>
-    <script src="assets/js/jquery.min.js"></script>
-    <script src="assets/js/blog-comments.js"></script>
+
+    <script src="assets/js/blog-data.js"></script>
+    <script>
+        // ============================================================
+        // RENDERING DE L'ARTICLE — lecture du slug dans ?slug=...
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', function () {
+            const params = new URLSearchParams(window.location.search);
+            const slug = params.get('slug');
+            const root = document.getElementById('article-root');
+            const posts = window.BLOG_POSTS || [];
+            const post = posts.find(function (p) { return p.slug === slug; });
+
+            // Les articles ont désormais des pages statiques indexables :
+            // rediriger vers elles pour éviter tout contenu dupliqué.
+            if (post && post.page) {
+                window.location.replace(post.page);
+                return;
+            }
+
+            if (!post) {
+                root.innerHTML = `
+                    <p class="lede" style="grid-column: 1 / 13;">Article introuvable. <a href="blog.html">Retourner au blog</a></p>`;
+                return;
+            }
+
+            document.title = post.title + ' — Ange Muu';
+            document.querySelector('meta[name="description"]').setAttribute('content', post.excerpt);
+
+            const dateFr = new Date(post.date + 'T00:00:00').toLocaleDateString('fr-FR', {
+                day: 'numeric', month: 'long', year: 'numeric'
+            });
+
+            root.innerHTML = `
+                <header class="band" style="margin-bottom: 48px;">
+                    <p class="article-kicker" style="grid-column: 1 / 13;">
+                        ${post.category} — ${dateFr} — ${post.readTime} de lecture
+                    </p>
+                    <h1 class="article-title" style="grid-column: 2 / 12;">${post.title}</h1>
+                </header>
+
+                <figure class="band" style="margin: 0 0 40px;">
+                    <img class="article-hero" src="${post.image}" alt="${post.title}" style="grid-column: 2 / 12;">
+                </figure>
+
+                <article class="band blog-content" style="grid-column: 2 / 12;">
+                    ${post.content}
+                    <a class="back-link" href="blog.html">← Retour à la liste</a>
+                </article>`;
+        });
+    </script>
 </body>
 </html>
