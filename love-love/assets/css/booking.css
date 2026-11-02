@@ -188,6 +188,33 @@
     color: #6d3148 !important;
 }
 
+/* Jours réservés : fond rose clair + point (cohérent avec la légende .booked) */
+.flatpickr-day.is-booked {
+    background: #efc4d6 !important;
+    border-radius: 50%;
+    position: relative;
+}
+
+.flatpickr-day.is-booked::after {
+    content: "";
+    position: absolute;
+    bottom: 3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #c06f90;
+}
+
+/* Jours off : barrés (cohérent avec la légende .off) */
+.flatpickr-day.is-off {
+    color: #c95a74 !important;
+    text-decoration: line-through;
+    background: #fdeef2 !important;
+    border-radius: 50%;
+}
+
 .calendar-legend {
     display: flex;
     gap: 12px;

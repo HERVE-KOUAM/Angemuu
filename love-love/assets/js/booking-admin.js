@@ -208,11 +208,7 @@ function initCalendars() {
 
     // 1. Calendrier principal "Mois en cours"
     if (document.getElementById('calendar-grid')) {
-        flatpickr('#calendar-grid', {
-            inline: true,
-            locale: localeFr,
-            dateFormat: 'Y-m-d'
-        });
+        initCalendarGrid(localeFr);
     }
 
     // 2. Sélecteur d'intervalle "Jours off"
@@ -242,6 +238,57 @@ function initCalendars() {
     if (applyBtn) {
         applyBtn.addEventListener('click', saveOffRange);
     }
+}
+
+
+// ============================================================
+// CALENDRIER PRINCIPAL : jours réservés et jours off colorés
+// ============================================================
+
+async function initCalendarGrid(localeFr) {
+    // Charger les réservations actives et les jours off en parallèle
+    let bookedDates = [];
+    let offDates = [];
+
+    try {
+        const [bookingRes, offRes] = await Promise.all([
+            supabaseClient.from('bookings').select('date, status'),
+            supabaseClient.from('off_days').select('off_date')
+        ]);
+
+        if (!bookingRes.error && bookingRes.data) {
+            bookedDates = bookingRes.data
+                .filter(b => b.status === 'pending' || b.status === 'confirmed')
+                .map(b => b.date);
+        } else {
+            console.error('Erreur Supabase bookings (calendrier):', bookingRes.error);
+        }
+
+        if (!offRes.error && offRes.data) {
+            offDates = offRes.data.map(d => d.off_date);
+        } else {
+            console.error('Erreur Supabase off_days (calendrier):', offRes.error);
+        }
+    } catch (e) {
+        console.error('Erreur chargement calendrier:', e);
+    }
+
+    const bookedSet = new Set(bookedDates);
+    const offSet = new Set(offDates);
+
+    flatpickr('#calendar-grid', {
+        inline: true,
+        locale: localeFr,
+        dateFormat: 'Y-m-d',
+        onDayCreate: function(dObj, dStr, fp, dayElem) {
+            const iso = dStr; // date au format YYYY-MM-DD
+            if (offSet.has(iso)) {
+                dayElem.classList.add('is-off');
+            } else if (bookedSet.has(iso)) {
+                dayElem.classList.add('is-booked');
+            }
+        }
+    });
 }
 
 
@@ -436,10 +483,16 @@ async function renderBookings() {
 // ============================================================
 
 async function updateBooking(id, status) {
-    const { data: { session } } = await supabaseClient.auth.getSession();
+    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+
+    if (sessionError) {
+        console.error('Erreur session:', sessionError);
+        alert('Erreur de session : ' + sessionError.message);
+        return;
+    }
 
     if (!session) {
-        alert('Votre session a expiré.');
+        alert('Votre session a expiré. Veuillez vous reconnecter.');
         location.reload();
         return;
     }
@@ -450,12 +503,14 @@ async function updateBooking(id, status) {
         .eq('id', id);
 
     if (error) {
-        console.error(error);
-        alert('Impossible de modifier la réservation : ' + error.message);
+        console.error('Erreur update bookings:', error);
+        alert('Impossible de modifier la réservation : ' + error.message +
+            (error.details ? '\nDétails : ' + error.details : ''));
         return;
     }
 
     await renderBookings();
+    refreshCalendarGrid();
 }
 
 async function deleteBooking(id) {
@@ -467,12 +522,14 @@ async function deleteBooking(id) {
         .eq('id', id);
 
     if (error) {
-        console.error(error);
-        alert('Impossible de supprimer la réservation : ' + error.message);
+        console.error('Erreur delete bookings:', error);
+        alert('Impossible de supprimer la réservation : ' + error.message +
+            (error.details ? '\nDétails : ' + error.details : ''));
         return;
     }
 
     await renderBookings();
+    refreshCalendarGrid();
 }
 
 
