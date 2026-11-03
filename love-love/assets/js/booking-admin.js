@@ -293,6 +293,24 @@ async function initCalendarGrid(localeFr) {
 
 
 // ============================================================
+// RAFRAICHIR LE CALENDRIER PRINCIPAL (après confirm/suppr.)
+// ============================================================
+
+function refreshCalendarGrid() {
+    const el = document.getElementById('calendar-grid');
+    if (!el) return;
+
+    // Détruire l'instance Flatpickr existante pour éviter les doublons
+    if (el._flatpickr) {
+        el._flatpickr.destroy();
+    }
+
+    const localeFr = (flatpickr.l10ns && flatpickr.l10ns.fr) ? flatpickr.l10ns.fr : 'default';
+    initCalendarGrid(localeFr);
+}
+
+
+// ============================================================
 // DATE PICKER PUBLIC : jours off désactivés depuis Supabase
 // ============================================================
 
