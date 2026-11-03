@@ -500,20 +500,31 @@ async function renderBookings() {
 // CONFIRMER / ANNULER / SUPPRIMER
 // ============================================================
 
+// Vérifie la session et, si absente, affiche le login au lieu de recharger.
+// getUser() tente aussi de rafraîchir le token si la session est expirée.
+async function ensureAdminSession() {
+    const { data: { user }, error } = await supabaseClient.auth.getUser();
+
+    if (error || !user) {
+        console.error('Session absente/expirée:', error);
+        showLogin();
+        return false;
+    }
+
+    const email = user.email ? user.email.toLowerCase() : '';
+    if (!ADMIN_EMAILS.includes(email)) {
+        await supabaseClient.auth.signOut();
+        alert('Accès administrateur refusé.');
+        showLogin();
+        return false;
+    }
+
+    return true;
+}
+
 async function updateBooking(id, status) {
-    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
-
-    if (sessionError) {
-        console.error('Erreur session:', sessionError);
-        alert('Erreur de session : ' + sessionError.message);
-        return;
-    }
-
-    if (!session) {
-        alert('Votre session a expiré. Veuillez vous reconnecter.');
-        location.reload();
-        return;
-    }
+    const ok = await ensureAdminSession();
+    if (!ok) return;
 
     const { error } = await supabaseClient
         .from('bookings')
@@ -533,6 +544,9 @@ async function updateBooking(id, status) {
 
 async function deleteBooking(id) {
     if (!confirm('Voulez-vous vraiment supprimer cette réservation ?')) return;
+
+    const ok = await ensureAdminSession();
+    if (!ok) return;
 
     const { error } = await supabaseClient
         .from('bookings')
