@@ -198,16 +198,9 @@ function showAdmin() {
 // ============================================================
 
 function initCalendars() {
-    // Vérifier si Flatpickr est chargé
-    if (typeof flatpickr === 'undefined') {
-        console.error('Flatpickr n\'est pas chargé !');
-        return;
-    }
-    const localeFr = (flatpickr.l10ns && flatpickr.l10ns.fr) ? flatpickr.l10ns.fr : 'default';
-
-    // 1. Calendrier principal "Mois en cours"
+    // 1. Calendrier principal "Mois en cours" (style shadcn)
     if (document.getElementById('calendar-grid')) {
-        initCalendarGrid(localeFr);
+        initCalendar('calendar-grid', false);
     }
 
     // 2. Sélecteur d'intervalle "Jours off"
@@ -235,55 +228,7 @@ function initCalendars() {
 }
 
 
-// ============================================================
-// CALENDRIER PRINCIPAL : jours réservés et jours off colorés
-// ============================================================
-
-async function initCalendarGrid(localeFr) {
-    // Charger les réservations actives et les jours off en parallèle
-    let bookedDates = [];
-    let offDates = [];
-
-    try {
-        const [bookingRes, offRes] = await Promise.all([
-            supabaseClient.from('bookings').select('date, status'),
-            supabaseClient.from('off_days').select('off_date')
-        ]);
-
-        if (!bookingRes.error && bookingRes.data) {
-            bookedDates = bookingRes.data
-                .filter(b => b.status === 'pending' || b.status === 'confirmed')
-                .map(b => b.date);
-        } else {
-            console.error('Erreur Supabase bookings (calendrier):', bookingRes.error);
-        }
-
-        if (!offRes.error && offRes.data) {
-            offDates = offRes.data.map(d => d.off_date);
-        } else {
-            console.error('Erreur Supabase off_days (calendrier):', offRes.error);
-        }
-    } catch (e) {
-        console.error('Erreur chargement calendrier:', e);
-    }
-
-    const bookedSet = new Set(bookedDates);
-    const offSet = new Set(offDates);
-
-    flatpickr('#calendar-grid', {
-        inline: true,
-        locale: localeFr,
-        dateFormat: 'Y-m-d',
-        onDayCreate: function(dObj, dStr, fp, dayElem) {
-            const iso = dStr; // date au format YYYY-MM-DD
-            if (offSet.has(iso)) {
-                dayElem.classList.add('is-off');
-            } else if (bookedSet.has(iso)) {
-                dayElem.classList.add('is-booked');
-            }
-        }
-    });
-}
+// Le calendrier principal est géré par booking-calendar.js (style shadcn).
 
 
 // ============================================================
@@ -293,14 +238,7 @@ async function initCalendarGrid(localeFr) {
 function refreshCalendarGrid() {
     const el = document.getElementById('calendar-grid');
     if (!el) return;
-
-    // Détruire l'instance Flatpickr existante pour éviter les doublons
-    if (el._flatpickr) {
-        el._flatpickr.destroy();
-    }
-
-    const localeFr = (flatpickr.l10ns && flatpickr.l10ns.fr) ? flatpickr.l10ns.fr : 'default';
-    initCalendarGrid(localeFr);
+    initCalendar('calendar-grid', false);
 }
 
 

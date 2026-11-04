@@ -16,6 +16,8 @@ import { z } from "https://esm.sh/zod@3.23.8";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const NTFY_TOPIC = Deno.env.get("NTFY_TOPIC") ?? "angemuu-reservations";
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
+const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "Angemuu <contact@angemuu.net>";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,6 +35,15 @@ const bookingSchema = z.object({
   location: z.string().trim().min(2, "Lieu requis").max(100, "Lieu trop long"),
   comment: z.string().trim().max(1000, "Commentaire trop long").optional().nullable(),
 });
+
+// Règles métier
+const MAX_BOOKINGS_PER_DAY = 2;
+const BLOCK_HOURS = 5;
+
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + (m || 0);
+}
 
 Deno.serve(async (req) => {
   // Préflight CORS
@@ -52,12 +63,56 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Insertion (hérite du rôle de l'appelant -> les RLS s'appliquent)
+    // 2. Vérification des règles métier (limite 2/jour + blocage 5h)
     const authHeader = req.headers.get("Authorization") ?? "";
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
     });
 
+    const { data: existing, error: fetchError } = await supabase
+      .from("bookings")
+      .select("time, status")
+      .eq("date", parsed.data.date);
+
+    if (fetchError) {
+      return new Response(
+        JSON.stringify({ error: "db_error", message: fetchError.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const active = (existing || []).filter(b => b.status === "pending" || b.status === "confirmed");
+
+    // Limite de RDV par jour
+    if (active.length >= MAX_BOOKINGS_PER_DAY) {
+      return new Response(
+        JSON.stringify({ error: "day_full" }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Créneau déjà réservé
+    if (active.some(b => b.time === parsed.data.time)) {
+      return new Response(
+        JSON.stringify({ error: "slot_taken" }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Blocage 5h : un RDV à H bloque [H, H+5h]
+    const slotMin = timeToMinutes(parsed.data.time);
+    const blocked = active.some(b => {
+      const H = timeToMinutes(b.time);
+      return slotMin >= H && slotMin <= H + BLOCK_HOURS * 60;
+    });
+    if (blocked) {
+      return new Response(
+        JSON.stringify({ error: "slot_blocked" }),
+        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 3. Insertion
     const { data, error } = await supabase
       .from("bookings")
       .insert([{ ...parsed.data, status: "pending" }])
@@ -78,7 +133,55 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 3. Notification admin (ntfy) — non bloquante
+    // 4. Outbox : événement booking.created (pour n8n)
+    try {
+      await supabase.from("outbox_events").insert({
+        event_type: "booking.created",
+        payload: {
+          booking_id: data.id,
+          client_name: parsed.data.client_name,
+          email: parsed.data.email,
+          date: parsed.data.date,
+          time: parsed.data.time,
+          service: parsed.data.service,
+        },
+        status: "pending",
+      });
+    } catch (e) {
+      console.error("outbox error:", e);
+    }
+
+    // 5. Email de réception (Resend) — transitoire, en attendant n8n
+    if (RESEND_API_KEY && parsed.data.email) {
+      try {
+        await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${RESEND_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: RESEND_FROM,
+            to: [parsed.data.email],
+            subject: "Votre demande de réservation — Ange Muu",
+            html: `<p>Bonjour <strong>${parsed.data.client_name}</strong>,</p>
+                   <p>Nous avons bien reçu votre demande de réservation :</p>
+                   <ul>
+                     <li>Service : ${parsed.data.service}</li>
+                     <li>Date : ${parsed.data.date}</li>
+                     <li>Heure : ${parsed.data.time}</li>
+                     <li>Lieu : ${parsed.data.location}</li>
+                   </ul>
+                   <p>Nous vous confirmerons votre rendez-vous très prochainement.</p>
+                   <p>À bientôt,<br>L'équipe Ange Muu</p>`,
+          }),
+        });
+      } catch (e) {
+        console.error("resend error:", e);
+      }
+    }
+
+    // 6. Notification admin (ntfy) — non bloquante
     try {
       const msg =
         `Nouvelle réservation : ${parsed.data.client_name} — ${parsed.data.service} ` +

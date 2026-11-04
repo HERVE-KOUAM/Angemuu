@@ -1,0 +1,182 @@
+/* ============================================================
+   CALENDRIER + CRÉNEAUX — style façon shadcn/ui (vanilla)
+   Préfixe : sc- (shadcn calendar)
+   ============================================================ */
+
+.sc-calendar-shell,
+.sc-slots-shell {
+    margin-top: 0.5rem;
+}
+
+/* ---------- Calendrier ---------- */
+.sc-calendar {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    font-family: inherit;
+    user-select: none;
+}
+
+.sc-cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.sc-cal-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #0f172a;
+    text-transform: capitalize;
+}
+
+.sc-cal-nav {
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    border-radius: 0.5rem;
+    color: #0f172a;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+.sc-cal-nav:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.sc-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+.sc-cal-dow {
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #64748b;
+    padding: 0.25rem 0;
+}
+
+.sc-cal-cell {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    color: #0f172a;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.sc-cal-cell:hover {
+    background: #f1f5f9;
+}
+.sc-cal-cell.empty {
+    cursor: default;
+}
+.sc-cal-cell.past {
+    color: #cbd5e1;
+    cursor: not-allowed;
+}
+.sc-cal-cell.off {
+    color: #cbd5e1;
+    text-decoration: line-through;
+    cursor: not-allowed;
+    background: #fef2f2;
+}
+.sc-cal-cell.full {
+    color: #cbd5e1;
+    cursor: not-allowed;
+    background: #f8fafc;
+}
+.sc-cal-cell.booked {
+    color: #ec4899;
+    font-weight: 600;
+}
+.sc-cal-cell.selected {
+    background: #ec4899;
+    color: #fff;
+    font-weight: 600;
+}
+.sc-cal-cell.selected:hover {
+    background: #db2777;
+}
+
+/* ---------- Créneaux horaires ---------- */
+.sc-slots-title {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #0f172a;
+    margin-bottom: 0.5rem;
+}
+
+.sc-slots-hint {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin: 0;
+}
+
+.sc-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+}
+
+.sc-slot {
+    padding: 0.5rem 0.25rem;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    color: #0f172a;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.sc-slot:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+.sc-slot.selected {
+    background: #ec4899;
+    border-color: #ec4899;
+    color: #fff;
+    font-weight: 600;
+}
+.sc-slot:disabled {
+    color: #cbd5e1;
+    background: #f8fafc;
+    cursor: not-allowed;
+    text-decoration: line-through;
+}
+
+/* ---------- Légende ---------- */
+.sc-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+.sc-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+.sc-legend-dot {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 0.2rem;
+    display: inline-block;
+}
+.sc-legend-dot.off { background: #fef2f2; border: 1px solid #fecaca; }
+.sc-legend-dot.full { background: #f8fafc; border: 1px solid #e2e8f0; }
+.sc-legend-dot.booked { background: #ec4899; }
+.sc-legend-dot.available { background: #fff; border: 1px solid #e2e8f0; }

@@ -1,9 +1,11 @@
 document.addEventListener('DOMContentLoaded', function() {
     const bookingForm = document.getElementById('booking-form');
 
-    // Initialisation du sélecteur de date public (jours off désactivés)
-    initPublicDatePicker();
-    
+    // Initialisation du calendrier public (style shadcn) + créneaux
+    initCalendar('booking-date-picker', true);
+    const slotsShell = document.getElementById('booking-slots');
+    if (slotsShell) slotsShell.innerHTML = '<p class="sc-slots-hint">Sélectionnez une date pour voir les créneaux disponibles.</p>';
+
     if (bookingForm) {
         bookingForm.addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -45,9 +47,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
 
-                // Créneau déjà pris (contrainte UNIQUE) -> erreur 409 / slot_taken
+                // Erreurs métier (validation serveur)
                 if (data && data.error === 'slot_taken') {
                     alert('❌ Ce créneau (date et heure) est déjà réservé. Veuillez choisir un autre créneau.');
+                    return;
+                }
+                if (data && data.error === 'slot_blocked') {
+                    alert('❌ Ce créneau est dans l\'intervalle de 5h d\'un rendez-vous existant. Choisissez un autre créneau.');
+                    return;
+                }
+                if (data && data.error === 'day_full') {
+                    alert('❌ Cette journée a déjà atteint sa limite de rendez-vous. Choisissez une autre date.');
                     return;
                 }
 
@@ -93,37 +103,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-// ============================================================
-// DATE PICKER PUBLIC : jours off désactivés depuis Supabase
-// ============================================================
-async function initPublicDatePicker() {
-    const picker = document.getElementById('booking-date-picker');
-    if (!picker || typeof flatpickr === 'undefined') return;
-
-    let disabledDates = [];
-    try {
-        const { data: offDays, error } = await window.supabaseClient
-            .from('off_days')
-            .select('off_date');
-        if (error) {
-            console.error('Erreur chargement off_days:', error);
-        } else if (offDays) {
-            disabledDates = offDays.map(d => d.off_date);
-        }
-    } catch (e) {
-        console.error('Erreur chargement off_days:', e);
-    }
-
-    const localeFr = (flatpickr.l10ns && flatpickr.l10ns.fr) ? flatpickr.l10ns.fr : 'default';
-    flatpickr('#booking-date-picker', {
-        inline: true,
-        locale: localeFr,
-        dateFormat: 'Y-m-d',
-        minDate: 'today',
-        disable: disabledDates,
-        onChange: function(selectedDates, dateStr) {
-            const input = document.getElementById('booking-date-input');
-            if (input) input.value = dateStr;
-        }
-    });
-}
+// Le calendrier public et les créneaux sont gérés par
+// booking-calendar.js et booking-slots.js (style shadcn).
