@@ -204,6 +204,7 @@ function initCalendars() {
     }
 
     // 2. Sélecteur d'intervalle "Jours off"
+    const localeFr = (flatpickr.l10ns && flatpickr.l10ns.fr) ? flatpickr.l10ns.fr : 'default';
     if (document.getElementById('off-range-picker')) {
         flatpickr('#off-range-picker', {
             inline: true,
