@@ -15,6 +15,7 @@ import { z } from "https://esm.sh/zod@3.23.8";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const NTFY_TOPIC = Deno.env.get("NTFY_TOPIC") ?? "angemuu-reservations";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "Angemuu <contact@angemuu.net>";
@@ -64,10 +65,9 @@ Deno.serve(async (req) => {
     }
 
     // 2. Vérification des règles métier (limite 2/jour + blocage 5h)
-    const authHeader = req.headers.get("Authorization") ?? "";
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    // Opérations internes avec la clé service_role (côté serveur) :
+    // l'appelant est anonyme et les RLS réservent le SELECT bookings aux admins.
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
     const { data: existing, error: fetchError } = await supabase
       .from("bookings")
