@@ -1,5 +1,8 @@
 document.addEventListener('DOMContentLoaded', function() {
     const bookingForm = document.getElementById('booking-form');
+
+    // Initialisation du sélecteur de date public (jours off désactivés)
+    initPublicDatePicker();
     
     if (bookingForm) {
         bookingForm.addEventListener('submit', async function(e) {
@@ -24,29 +27,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // --- VÉRIFICATION ANTI DOUBLE RÉSERVATION ---
-            // Utilise la RPC is_slot_taken : seul accès public autorisé par les RLS,
-            // sans jamais exposer les données des réservations.
-            // ponytail: check-then-act = race condition possible si deux soumissions
-            // simultanées sur le même créneau. Plafond connu ; correctif définitif :
-            // contrainte UNIQUE (date, time) partielle en base.
-            if (typeof window.supabaseClient !== 'undefined') {
-                const { data: slotTaken, error: checkError } = await window.supabaseClient
-                    .rpc('is_slot_taken', { p_date: date, p_time: time });
-
-                if (checkError) {
-                    console.error('Erreur vérification Supabase :', checkError);
-                } else if (slotTaken) {
-                    alert('❌ Ce créneau (date et heure) est déjà réservé. Veuillez choisir un autre créneau.');
-                    return;
-                }
-            }
-
-            // --- TENTATIVE D'INSERTION SUPABASE ---
+            // --- TENTATIVE D'INSERTION VIA EDGE FUNCTION (validation serveur) ---
+            // La fonction save-booking valide les données (zod), insère la réservation
+            // de façon atomique (contrainte UNIQUE partielle) et notifie l'admin (ntfy).
             let dbError = null;
             if (typeof window.supabaseClient !== 'undefined') {
-                const { error } = await window.supabaseClient.from('bookings')
-                    .insert([{
+                const { data, error } = await window.supabaseClient.functions.invoke('save-booking', {
+                    body: {
                         client_name: clientName,
                         phone: phone,
                         email: email,
@@ -54,12 +41,22 @@ document.addEventListener('DOMContentLoaded', function() {
                         time: time,
                         service: service,
                         location: location,
-                        status: 'pending'
-                    }]);
-                
+                        comment: comment
+                    }
+                });
+
+                // Créneau déjà pris (contrainte UNIQUE) -> erreur 409 / slot_taken
+                if (data && data.error === 'slot_taken') {
+                    alert('❌ Ce créneau (date et heure) est déjà réservé. Veuillez choisir un autre créneau.');
+                    return;
+                }
+
                 if (error) {
-                    console.error('Erreur Supabase :', error);
-                    dbError = error.message;
+                    console.error('Erreur Edge Function :', error);
+                    dbError = (data && data.message) || error.message || 'Erreur lors de l\'enregistrement';
+                } else if (data && data.error) {
+                    console.error('Erreur Edge Function :', data);
+                    dbError = data.message || data.error;
                 }
             } else {
                 dbError = 'supabaseClient non défini';
@@ -94,3 +91,39 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+
+// ============================================================
+// DATE PICKER PUBLIC : jours off désactivés depuis Supabase
+// ============================================================
+async function initPublicDatePicker() {
+    const picker = document.getElementById('booking-date-picker');
+    if (!picker || typeof flatpickr === 'undefined') return;
+
+    let disabledDates = [];
+    try {
+        const { data: offDays, error } = await window.supabaseClient
+            .from('off_days')
+            .select('off_date');
+        if (error) {
+            console.error('Erreur chargement off_days:', error);
+        } else if (offDays) {
+            disabledDates = offDays.map(d => d.off_date);
+        }
+    } catch (e) {
+        console.error('Erreur chargement off_days:', e);
+    }
+
+    const localeFr = (flatpickr.l10ns && flatpickr.l10ns.fr) ? flatpickr.l10ns.fr : 'default';
+    flatpickr('#booking-date-picker', {
+        inline: true,
+        locale: localeFr,
+        dateFormat: 'Y-m-d',
+        minDate: 'today',
+        disable: disabledDates,
+        onChange: function(selectedDates, dateStr) {
+            const input = document.getElementById('booking-date-input');
+            if (input) input.value = dateStr;
+        }
+    });
+}

@@ -43,3 +43,7 @@ yarn-error.log*
 # HTTrack / download artifacts
 hts-cache/
 hts-log.txt
+
+# Scripts SQL manuels redondants (remplacés par les migrations versionnées)
+supabase/off_days.sql
+supabase/rls-bookings-posts-comments.sql

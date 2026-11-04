@@ -1,14 +1,8 @@
 // ============================================================
-// SUPABASE
+// CLIENT SUPABASE
 // ============================================================
-
-const SUPABASE_URL = 'https://kskjalzggxaycfzfgspc.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_yKfW79OSFtVKd5QXDfDsJw_2qciBjoI';
-
-window.supabaseClient = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-);
+// Le client est initialisé dans assets/js/supabase-client.js
+// (chargé avant ce fichier). window.supabaseClient est disponible.
 
 
 // ============================================================
@@ -21,6 +15,11 @@ const ADMIN_EMAILS = [
 ];
 
 let selectedOffDates = [];
+
+// Pagination & filtre des réservations
+let currentPage = 0;
+const PAGE_SIZE = 20;
+let statusFilter = 'all';
 
 
 // ============================================================
@@ -228,11 +227,6 @@ function initCalendars() {
         });
     }
 
-    // 3. Sélecteur de date du formulaire public de réservation
-    if (document.getElementById('booking-date-picker')) {
-        initPublicDatePicker(localeFr);
-    }
-
     // Bouton d'enregistrement d'intervalle de jours off
     const applyBtn = document.getElementById('apply-off-range');
     if (applyBtn) {
@@ -307,41 +301,6 @@ function refreshCalendarGrid() {
 
     const localeFr = (flatpickr.l10ns && flatpickr.l10ns.fr) ? flatpickr.l10ns.fr : 'default';
     initCalendarGrid(localeFr);
-}
-
-
-// ============================================================
-// DATE PICKER PUBLIC : jours off désactivés depuis Supabase
-// ============================================================
-
-async function initPublicDatePicker(localeFr) {
-    let disabledDates = [];
-
-    try {
-        const { data: offDays, error } = await supabaseClient
-            .from('off_days')
-            .select('off_date');
-
-        if (error) {
-            console.error('Erreur chargement off_days:', error);
-        } else if (offDays) {
-            disabledDates = offDays.map(d => d.off_date);
-        }
-    } catch (e) {
-        console.error('Erreur chargement off_days:', e);
-    }
-
-    flatpickr('#booking-date-picker', {
-        inline: true,
-        locale: localeFr,
-        dateFormat: 'Y-m-d',
-        minDate: 'today',
-        disable: disabledDates,
-        onChange: function(selectedDates, dateStr) {
-            const input = document.getElementById('booking-date-input');
-            if (input) input.value = dateStr;
-        }
-    });
 }
 
 
@@ -451,11 +410,15 @@ async function renderBookings() {
 
     list.innerHTML = '<p>Chargement des réservations...</p>';
 
-    const { data: bookings, error } = await supabaseClient
-        .from('bookings')
-        .select('*')
+    let query = supabaseClient.from('bookings').select('*', { count: 'exact' });
+    if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
+    }
+
+    const { data: bookings, error, count } = await query
         .order('date', { ascending: true })
-        .order('time', { ascending: true });
+        .order('time', { ascending: true })
+        .range(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE - 1);
 
     if (error) {
         console.error('Erreur Supabase:', error);
@@ -472,6 +435,9 @@ async function renderBookings() {
         list.innerHTML = '<p>Aucune réservation.</p>';
         return;
     }
+
+    const total = count || 0;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
     list.innerHTML = bookings
         .map(booking => `
@@ -492,7 +458,34 @@ async function renderBookings() {
                 </div>
             </div>
         `)
-        .join('');
+        .join('') + `
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <small class="text-muted">${total} réservation(s) — page ${currentPage + 1}/${totalPages}</small>
+            <div class="btn-group">
+                <button class="btn btn-sm btn-outline-secondary" onclick="prevPage()" ${currentPage === 0 ? 'disabled' : ''}>← Précédent</button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="nextPage()" ${currentPage + 1 >= totalPages ? 'disabled' : ''}>Suivant →</button>
+            </div>
+        </div>`;
+}
+
+// Filtre par statut
+function setStatusFilter(value) {
+    statusFilter = value;
+    currentPage = 0;
+    renderBookings();
+}
+
+// Pagination
+function prevPage() {
+    if (currentPage > 0) {
+        currentPage--;
+        renderBookings();
+    }
+}
+
+function nextPage() {
+    currentPage++;
+    renderBookings();
 }
 
 
