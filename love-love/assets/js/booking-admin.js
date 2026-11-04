@@ -36,6 +36,49 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
+// ============================================================
+// DÉLÉGATION D'ÉVÉNEMENTS (compatible CSP strict)
+// Remplace les attributs onclick inline, bloqués par le CSP.
+// ============================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Boutons de la liste des réservations (confirmer / annuler / supprimer / pagination)
+    const bookingList = document.getElementById('booking-list');
+    if (bookingList && !bookingList.dataset.actionsReady) {
+        bookingList.dataset.actionsReady = '1';
+        bookingList.addEventListener('click', function(e) {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            const action = btn.dataset.action;
+            const id = btn.dataset.id;
+            if (action === 'confirm') updateBooking(id, 'confirmed');
+            else if (action === 'cancel') updateBooking(id, 'canceled');
+            else if (action === 'delete') deleteBooking(id);
+            else if (action === 'prev') prevPage();
+            else if (action === 'next') nextPage();
+        });
+    }
+
+    // Filtre par statut (remplace onchange inline)
+    const filter = document.getElementById('booking-status-filter');
+    if (filter && !filter.dataset.filterReady) {
+        filter.dataset.filterReady = '1';
+        filter.addEventListener('change', function() {
+            setStatusFilter(this.value);
+        });
+    }
+
+    // Jours off : boutons Supprimer
+    const offList = document.getElementById('off-days-list');
+    if (offList && !offList.dataset.offReady) {
+        offList.dataset.offReady = '1';
+        offList.addEventListener('click', function(e) {
+            const btn = e.target.closest('[data-action="delete-off"]');
+            if (btn) deleteOffDay(btn.dataset.id);
+        });
+    }
+});
+
 
 // ============================================================
 // VERIFIER LA SESSION
@@ -311,7 +354,7 @@ async function loadOffDays() {
     list.innerHTML = offDays.map(day => `
         <li class="list-group-item d-flex justify-content-between align-items-center">
             <span>${escapeHtml(day.off_date)}</span>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteOffDay('${day.id}')">Supprimer</button>
+            <button class="btn btn-sm btn-outline-danger" data-action="delete-off" data-id="${day.id}">Supprimer</button>
         </li>
     `).join('');
 }
@@ -391,9 +434,9 @@ async function renderBookings() {
                 <p class="mb-2"><strong>Statut :</strong> ${escapeHtml(booking.status || 'pending')}</p>
 
                 <div class="btn-group">
-                    <button class="btn btn-sm btn-success" onclick="updateBooking('${booking.id}', 'confirmed')">Confirmer</button>
-                    <button class="btn btn-sm btn-warning" onclick="updateBooking('${booking.id}', 'canceled')">Annuler</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteBooking('${booking.id}')">Supprimer</button>
+                    <button class="btn btn-sm btn-success" data-action="confirm" data-id="${booking.id}">Confirmer</button>
+                    <button class="btn btn-sm btn-warning" data-action="cancel" data-id="${booking.id}">Annuler</button>
+                    <button class="btn btn-sm btn-danger" data-action="delete" data-id="${booking.id}">Supprimer</button>
                 </div>
             </div>
         `)
@@ -401,8 +444,8 @@ async function renderBookings() {
         <div class="d-flex justify-content-between align-items-center mt-3">
             <small class="text-muted">${total} réservation(s) — page ${currentPage + 1}/${totalPages}</small>
             <div class="btn-group">
-                <button class="btn btn-sm btn-outline-secondary" onclick="prevPage()" ${currentPage === 0 ? 'disabled' : ''}>← Précédent</button>
-                <button class="btn btn-sm btn-outline-secondary" onclick="nextPage()" ${currentPage + 1 >= totalPages ? 'disabled' : ''}>Suivant →</button>
+                <button class="btn btn-sm btn-outline-secondary" data-action="prev" ${currentPage === 0 ? 'disabled' : ''}>← Précédent</button>
+                <button class="btn btn-sm btn-outline-secondary" data-action="next" ${currentPage + 1 >= totalPages ? 'disabled' : ''}>Suivant →</button>
             </div>
         </div>`;
 }

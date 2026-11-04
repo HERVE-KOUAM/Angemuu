@@ -51,9 +51,9 @@ function renderCalendar(containerId, selectable) {
     let html = `
         <div class="sc-calendar">
             <div class="sc-cal-header">
-                <button type="button" class="sc-cal-nav" onclick="calendarNav(-1,'${containerId}',${selectable})">‹</button>
+                <button type="button" class="sc-cal-nav" data-nav="-1">‹</button>
                 <div class="sc-cal-title">${CAL_MONTHS[month]} ${year}</div>
-                <button type="button" class="sc-cal-nav" onclick="calendarNav(1,'${containerId}',${selectable})">›</button>
+                <button type="button" class="sc-cal-nav" data-nav="1">›</button>
             </div>
             <div class="sc-cal-grid">
                 ${CAL_DAYS.map(d => `<div class="sc-cal-dow">${d}</div>`).join('')}
@@ -80,8 +80,8 @@ function renderCalendar(containerId, selectable) {
         if (hasActive) cls += ' booked';
         if (isSelected) cls += ' selected';
 
-        const click = selectableDay ? `onclick="selectCalendarDate('${dateStr}','${containerId}')"` : '';
-        html += `<div class="${cls}" ${click}>${day}</div>`;
+        const dateAttr = selectableDay ? `data-select-date="${dateStr}"` : '';
+        html += `<div class="${cls}" ${dateAttr}>${day}</div>`;
     }
 
     html += `</div></div>`;
@@ -117,7 +117,28 @@ function selectCalendarDate(dateStr, containerId) {
 }
 
 // Initialisation : charge les données puis rend le calendrier
+// Délégation d'événements (addEventListener) : compatible CSP strict
+// (les attributs onclick inline sont bloqués par le CSP).
 async function initCalendar(containerId, selectable) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
     await loadCalendarData();
+
+    if (!container.dataset.calendarReady) {
+        container.dataset.calendarReady = '1';
+        container.addEventListener('click', function(e) {
+            const navBtn = e.target.closest('[data-nav]');
+            if (navBtn) {
+                calendarNav(parseInt(navBtn.dataset.nav, 10), containerId, selectable);
+                return;
+            }
+            const dayCell = e.target.closest('[data-select-date]');
+            if (dayCell) {
+                selectCalendarDate(dayCell.dataset.selectDate, containerId);
+            }
+        });
+    }
+
     renderCalendar(containerId, selectable);
 }

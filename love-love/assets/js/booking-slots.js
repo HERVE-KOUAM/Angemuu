@@ -31,12 +31,21 @@ async function renderSlotsForDate(dateStr) {
         return;
     }
 
+    // Délégation d'événements : compatible CSP strict (pas d'onclick inline)
+    if (!container.dataset.slotsReady) {
+        container.dataset.slotsReady = '1';
+        container.addEventListener('click', function(e) {
+            const btn = e.target.closest('[data-slot]');
+            if (btn) selectSlot(btn.dataset.slot);
+        });
+    }
+
     container.innerHTML = `
         <div class="sc-slots-title">Choisissez une heure</div>
         <div class="sc-slots-grid">
             ${slots.map(s => `
                 <button type="button" class="sc-slot ${s.available ? '' : 'disabled'}"
-                    ${s.available ? `onclick="selectSlot('${s.time}')"` : 'disabled'}>
+                    ${s.available ? `data-slot="${s.time}"` : 'disabled'}>
                     ${s.time}
                 </button>
             `).join('')}
