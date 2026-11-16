@@ -157,7 +157,13 @@ drop policy if exists "posts_select_public" on public.posts;
 create policy "posts_select_public"
     on public.posts for select
     to anon, authenticated
-    using (true);
+    using (status = 'published');
+
+drop policy if exists "posts_select_admin" on public.posts;
+create policy "posts_select_admin"
+    on public.posts for select
+    to authenticated
+    using (public.is_admin());
 
 drop policy if exists "posts_insert_admin" on public.posts;
 create policy "posts_insert_admin"

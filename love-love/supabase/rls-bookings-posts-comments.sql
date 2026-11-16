@@ -67,11 +67,20 @@ create policy "bookings_delete_admin"
 alter table public.posts enable row level security;
 
 -- SELECT publique : le blog est lisible par tous
+drop policy if exists "Admins can manage posts" on public.posts;
+drop policy if exists "Public can view published posts" on public.posts;
 drop policy if exists "posts_select_public" on public.posts;
+drop policy if exists "posts_select_published" on public.posts;
 create policy "posts_select_public"
     on public.posts for select
     to anon, authenticated
-    using (true);
+    using (status = 'published');
+
+drop policy if exists "posts_select_admin" on public.posts;
+create policy "posts_select_admin"
+    on public.posts for select
+    to authenticated
+    using (public.is_admin());
 
 -- Écriture réservée aux admins
 drop policy if exists "posts_insert_admin" on public.posts;
@@ -84,7 +93,8 @@ drop policy if exists "posts_update_admin" on public.posts;
 create policy "posts_update_admin"
     on public.posts for update
     to authenticated
-    using (public.is_admin());
+    using (public.is_admin())
+    with check (public.is_admin());
 
 drop policy if exists "posts_delete_admin" on public.posts;
 create policy "posts_delete_admin"

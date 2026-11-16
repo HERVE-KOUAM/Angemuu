@@ -116,7 +116,7 @@ async function checkAdminSession() {
 function showLogin() {
     const adminContent = document.getElementById('admin-content');
     if (adminContent) {
-        adminContent.style.setProperty('display', 'none', 'important');
+        adminContent.hidden = true;
     }
 
     let login = document.getElementById('admin-login');
@@ -124,53 +124,36 @@ function showLogin() {
     if (!login) {
         login = document.createElement('div');
         login.id = 'admin-login';
+        login.className = 'admin-login';
+        login.hidden = true;
         login.innerHTML = `
-            <div style="
-                max-width:420px;
-                margin:80px auto;
-                padding:30px;
-                background:#fff;
-                border-radius:15px;
-                box-shadow:0 5px 25px rgba(0,0,0,0.1);
-            ">
-                <h2>Connexion administrateur</h2>
+            <section class="admin-login-panel" aria-labelledby="admin-login-title">
+                <h2 id="admin-login-title">Connexion administrateur</h2>
                 <p>Connectez-vous pour accéder aux réservations.</p>
 
-                <input
-                    type="email"
-                    id="admin-email"
-                    placeholder="Adresse email"
-                    autocomplete="email"
-                    style="width:100%; padding:12px; margin:10px 0; box-sizing:border-box;"
-                >
+                <form id="admin-login-form">
+                    <label for="admin-email">Adresse email</label>
+                    <input type="email" id="admin-email" autocomplete="email" required>
 
-                <input
-                    type="password"
-                    id="admin-password"
-                    placeholder="Mot de passe"
-                    autocomplete="current-password"
-                    style="width:100%; padding:12px; margin:10px 0; box-sizing:border-box;"
-                >
+                    <label for="admin-password">Mot de passe</label>
+                    <input type="password" id="admin-password" autocomplete="current-password" required>
 
-                <button
-                    id="admin-login-button"
-                    style="width:100%; padding:12px; margin-top:10px; cursor:pointer;"
-                >
-                    Se connecter
-                </button>
+                    <button id="admin-login-button" type="submit">Se connecter</button>
+                </form>
 
-                <p id="admin-login-error" style="color:red; margin-top:15px;"></p>
-            </div>
+                <p id="admin-login-error" role="alert" aria-live="polite"></p>
+            </section>
         `;
 
         document.body.prepend(login);
 
-        document
-            .getElementById('admin-login-button')
-            .addEventListener('click', adminLogin);
+        document.getElementById('admin-login-form').addEventListener('submit', function (event) {
+            event.preventDefault();
+            adminLogin();
+        });
     }
 
-    login.style.display = 'block';
+    login.hidden = false;
 }
 
 
@@ -195,19 +178,33 @@ async function adminLogin() {
         return;
     }
 
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
-        email,
-        password
-    });
+    const button = document.getElementById('admin-login-button');
+    button.disabled = true;
+    button.textContent = 'Connexion…';
+    let data;
+    let error;
+    try {
+        ({ data, error } = await supabaseClient.auth.signInWithPassword({ email, password }));
+    } catch (requestError) {
+        console.error('Erreur de connexion admin :', requestError);
+        errorElement.textContent = 'La connexion est indisponible. Vérifiez votre réseau puis réessayez.';
+        button.disabled = false;
+        button.textContent = 'Se connecter';
+        return;
+    }
 
     if (error) {
         console.error(error);
         errorElement.textContent = 'Email ou mot de passe incorrect.';
+        button.disabled = false;
+        button.textContent = 'Se connecter';
         return;
     }
 
     if (!data.user) {
         errorElement.textContent = 'Impossible de récupérer votre compte.';
+        button.disabled = false;
+        button.textContent = 'Se connecter';
         return;
     }
 
@@ -222,12 +219,12 @@ async function adminLogin() {
 function showAdmin() {
     const login = document.getElementById('admin-login');
     if (login) {
-        login.style.display = 'none';
+        login.hidden = true;
     }
 
     const adminContent = document.getElementById('admin-content');
     if (adminContent) {
-        adminContent.style.setProperty('display', 'block', 'important');
+        adminContent.hidden = false;
     }
 
     renderBookings();
@@ -501,15 +498,16 @@ async function updateBooking(id, status) {
     const ok = await ensureAdminSession();
     if (!ok) return;
 
-    const { error } = await supabaseClient
-        .from('bookings')
-        .update({ status: status })
-        .eq('id', id);
+    // Passage par la Edge Function admin-actions : met à jour le statut
+    // ET émet l'événement outbox (booking.confirmed / booking.canceled).
+    const action = status === 'confirmed' ? 'confirm' : status === 'canceled' ? 'cancel' : status;
+    const { data: res, error } = await supabaseClient.functions.invoke('admin-actions', {
+        body: { action, id }
+    });
 
     if (error) {
-        console.error('Erreur update bookings:', error);
-        alert('Impossible de modifier la réservation : ' + error.message +
-            (error.details ? '\nDétails : ' + error.details : ''));
+        console.error('Erreur admin-actions:', error);
+        alert('Impossible de modifier la réservation : ' + ((res && res.message) || error.message));
         return;
     }
 

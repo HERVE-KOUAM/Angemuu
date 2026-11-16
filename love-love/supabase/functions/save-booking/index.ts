@@ -19,6 +19,29 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const NTFY_TOPIC = Deno.env.get("NTFY_TOPIC") ?? "angemuu-reservations";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "Angemuu <contact@angemuu.net>";
+const MODIFICATION_SECRET = Deno.env.get("MODIFICATION_SECRET") ?? "angemuu-change-me-secret";
+const ADMIN_EMAILS = (Deno.env.get("ADMIN_EMAILS") ?? "murielleangemetiegamkengne@gmail.com,hkouamherve145@gmail.com")
+  .split(",").map(s => s.trim()).filter(Boolean);
+const WHATSAPP_TOKEN = Deno.env.get("WHATSAPP_TOKEN") ?? "";
+const WHATSAPP_PHONE_ID = Deno.env.get("WHATSAPP_PHONE_ID") ?? "";
+const WHATSAPP_ADMIN_PHONE = Deno.env.get("WHATSAPP_ADMIN_PHONE") ?? "237656142787";
+const WHATSAPP_TEMPLATE = Deno.env.get("WHATSAPP_TEMPLATE") ?? "nouvelle_reservation";
+
+// Token HMAC pour le lien de modification (sans compte)
+async function signToken(input: string, secret: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(input));
+  const bytes = new Uint8Array(sig);
+  let binary = "";
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -154,6 +177,10 @@ Deno.serve(async (req) => {
     // 5. Email de réception (Resend) — transitoire, en attendant n8n
     if (RESEND_API_KEY && parsed.data.email) {
       try {
+        // Lien de modification (token HMAC) — page modification.html (Phase E)
+        const token = await signToken(String(data.id), MODIFICATION_SECRET);
+        const modifLink = `https://angemuu.net/modification.html?b=${data.id}&t=${encodeURIComponent(token)}`;
+
         await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
@@ -173,6 +200,8 @@ Deno.serve(async (req) => {
                      <li>Lieu : ${parsed.data.location}</li>
                    </ul>
                    <p>Nous vous confirmerons votre rendez-vous très prochainement.</p>
+                   <p>Pour <strong>modifier</strong> votre réservation (sans créer de compte), cliquez ici :
+                      <a href="${modifLink}">Modifier ma réservation</a></p>
                    <p>À bientôt,<br>L'équipe Ange Muu</p>`,
           }),
         });
@@ -181,7 +210,72 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 6. Notification admin (ntfy) — non bloquante
+    // 6. Notification ADMIN par email (Resend) — à chaque réservation
+    if (RESEND_API_KEY && ADMIN_EMAILS.length) {
+      try {
+        await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${RESEND_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: RESEND_FROM,
+            to: ADMIN_EMAILS,
+            subject: "🔔 Nouvelle réservation — Ange Muu",
+            html: `<p><strong>Nouvelle réservation reçue :</strong></p>
+                   <ul>
+                     <li>Client : ${parsed.data.client_name}</li>
+                     <li>Téléphone : ${parsed.data.phone}</li>
+                     <li>Email : ${parsed.data.email || "non renseigné"}</li>
+                     <li>Service : ${parsed.data.service}</li>
+                     <li>Date : ${parsed.data.date} à ${parsed.data.time}</li>
+                     <li>Lieu : ${parsed.data.location}</li>
+                     <li>Commentaire : ${parsed.data.comment || "aucun"}</li>
+                   </ul>
+                   <p><a href="https://angemuu.net/admin/">Ouvrir l'espace Admin</a> pour confirmer.</p>`,
+          }),
+        });
+      } catch (e) {
+        console.error("resend admin error:", e);
+      }
+    }
+
+    // 7. Notification ADMIN par WhatsApp (Cloud API) — si configuré
+    if (WHATSAPP_TOKEN && WHATSAPP_PHONE_ID) {
+      try {
+        await fetch(`https://graph.facebook.com/v19.0/${WHATSAPP_PHONE_ID}/messages`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${WHATSAPP_TOKEN}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messaging_product: "whatsapp",
+            to: WHATSAPP_ADMIN_PHONE,
+            type: "template",
+            template: {
+              name: WHATSAPP_TEMPLATE,
+              language: { code: "fr" },
+              components: [
+                {
+                  type: "body",
+                  parameters: [
+                    { type: "text", text: parsed.data.client_name },
+                    { type: "text", text: parsed.data.service },
+                    { type: "text", text: `${parsed.data.date} à ${parsed.data.time}` },
+                  ],
+                },
+              ],
+            },
+          }),
+        });
+      } catch (e) {
+        console.error("whatsapp error:", e);
+      }
+    }
+
+    // 8. Notification admin (ntfy) — non bloquante
     try {
       const msg =
         `Nouvelle réservation : ${parsed.data.client_name} — ${parsed.data.service} ` +

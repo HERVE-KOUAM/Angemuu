@@ -6,17 +6,17 @@
     <title>Gestion du calendrier - Ange Muu</title>
     <link rel="stylesheet" href="../assets/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <link rel="stylesheet" href="../assets/css/booking.css">
+    <link rel="stylesheet" href="../assets/css/booking.css?v=3">
     <link rel="stylesheet" href="../assets/css/booking-calendar.css">
 </head>
-<body style="background:#fffafc;">
+<body class="admin-page">
 
-<div id="admin-content" style="display: none;">
+<div id="admin-content" hidden>
     <!-- Le contenu de votre dashboard admin ici -->
      <div class="container py-5">
         <div class="admin-nav">
             <a href="../index.html">← Retour au site</a>
-            <a href="#" onclick="window.location.reload()">Actualiser</a>
+            <a href="index.html">Actualiser</a>
         </div>
 
         <div class="row g-4">
@@ -96,21 +96,80 @@
             <div class="col-lg-6">
                 <div class="booking-shell">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h4 class="mb-0">Gestion du Blog</h4>
+                        <h4 class="mb-0">Gestion du blog</h4>
                         <button class="btn btn-sm btn-primary" id="new-post-btn" type="button">Nouvel Article</button>
                     </div>
-                    <div id="blog-form" style="display:none;" class="p-3 border rounded mb-3 bg-light">
+                    <p id="blog-admin-message" class="small mb-3" role="status" aria-live="polite"></p>
+                    <button class="btn btn-outline-secondary btn-sm mb-3" id="import-legacy-posts-btn" type="button">
+                        Importer les 4 articles existants
+                    </button>
+                    <form id="blog-form" class="mb-3" hidden>
                         <input type="hidden" id="post-id">
-                        <input type="text" id="post-title" class="form-control mb-2" placeholder="Titre">
-                        <input type="text" id="post-slug" class="form-control mb-2" placeholder="Slug (ex: mon-super-article)">
-                        <textarea id="post-content" class="form-control mb-2" placeholder="Contenu"></textarea>
-                        <select id="post-status" class="form-select mb-2">
-                            <option value="draft">Brouillon</option>
-                            <option value="published">Publié</option>
-                        </select>
-                        <button class="btn btn-success btn-sm w-100" id="save-post-btn" type="button">Enregistrer</button>
-                    </div>
-                    <div id="blog-list" class="mt-2"></div>
+                        <input type="hidden" id="post-image-url">
+                        <div class="mb-2">
+                            <label class="form-label" for="post-title">Titre</label>
+                            <input type="text" id="post-title" class="form-control" maxlength="180" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="post-slug">Adresse de l’article</label>
+                            <input type="text" id="post-slug" class="form-control" maxlength="180" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required>
+                            <div class="form-text">Minuscules, chiffres et tirets. Exemple : entretien-des-tresses.</div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="post-category">Thème</label>
+                            <input type="text" id="post-category" class="form-control" maxlength="60" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="post-excerpt">Résumé</label>
+                            <textarea id="post-excerpt" class="form-control" rows="3" maxlength="320" required></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6 mb-2">
+                                <label class="form-label" for="post-read-time">Lecture (minutes)</label>
+                                <input type="number" id="post-read-time" class="form-control" min="1" max="60" value="5" required>
+                            </div>
+                            <div class="col-sm-6 mb-2">
+                                <label class="form-label" for="post-published-at">Date de publication</label>
+                                <input type="date" id="post-published-at" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="post-image-file">Photo de l’article</label>
+                            <input type="file" id="post-image-file" class="form-control" accept="image/jpeg,image/png,image/webp">
+                            <div class="form-text">JPG, PNG ou WebP, 5 Mo maximum. La photo est stockée dans Supabase.</div>
+                            <div id="post-image-preview" class="blog-image-preview" role="img" aria-label="Aperçu de la photo sélectionnée" hidden></div>
+                            <div id="post-image-current" class="form-text" hidden></div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="post-image-alt">Description de la photo (accessibilité)</label>
+                            <input type="text" id="post-image-alt" class="form-control" maxlength="240" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="post-image-credit">Crédit photo</label>
+                            <input type="text" id="post-image-credit" class="form-control" maxlength="120">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="post-image-source">Lien de la source photo</label>
+                            <input type="url" id="post-image-source" class="form-control" placeholder="https://…">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="post-content">Contenu de l’article</label>
+                            <textarea id="post-content" class="form-control" rows="12" required></textarea>
+                            <div class="form-text">HTML autorisé : paragraphes, titres, listes, liens et emphase.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="post-status">État</label>
+                            <select id="post-status" class="form-select">
+                                <option value="draft">Brouillon (privé)</option>
+                                <option value="published">Publié</option>
+                            </select>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-success btn-sm" id="save-post-btn" type="submit">Enregistrer l’article</button>
+                            <button class="btn btn-outline-secondary btn-sm" id="cancel-post-btn" type="button">Annuler</button>
+                        </div>
+                    </form>
+                    <div id="blog-list" class="mt-2" aria-live="polite"></div>
                 </div>
             </div>
         </div>
@@ -125,9 +184,11 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../assets/js/supabase-client.js"></script>
+<script src="../assets/js/blog-data.js"></script>
+<script src="../assets/js/blog-repository.js"></script>
 <script src="../assets/js/booking-logic.js"></script>
 <script src="../assets/js/booking-calendar.js"></script>
-<script src="../assets/js/booking-admin.js"></script>
-<script src="../assets/js/blog-admin.js"></script>
+<script src="../assets/js/booking-admin.js?v=4"></script>
+<script src="../assets/js/blog-admin.js?v=3"></script>
 </body>
 </html>
