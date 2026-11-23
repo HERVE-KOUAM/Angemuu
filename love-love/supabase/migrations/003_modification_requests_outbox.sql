@@ -11,7 +11,7 @@
 -- ------------------------------------------------------------------
 create table if not exists public.modification_requests (
     id uuid primary key default gen_random_uuid(),
-    booking_id uuid not null references public.bookings(id) on delete cascade,
+    booking_id bigint not null references public.bookings(id) on delete cascade,
     new_date date not null,
     new_time time not null,
     justification text,

@@ -28,13 +28,13 @@ const requestSchema = z.object({
   booking_id: z.union([z.string(), z.number()]),
   token: z.string().min(10, "Token invalide"),
   new_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide"),
-  new_time: z.string().regex(/^\d{2}:\d{2}$/, "Heure invalide"),
+  new_time: z.string().regex(/^(0[5-9]|1[0-9]):00$/, "Heure indisponible"),
   justification: z.string().trim().min(10, "Justification trop courte").max(1000, "Justification trop longue"),
 });
 
 // Règles métier partagées
 const MAX_BOOKINGS_PER_DAY = 2;
-const BLOCK_HOURS = 5;
+const BLOCK_HOURS = 6;
 
 function timeToMinutes(t: string): number {
   const [h, m] = t.split(":").map(Number);
@@ -135,10 +135,7 @@ Deno.serve(async (req) => {
       );
     }
     const slotMin = timeToMinutes(parsed.data.new_time);
-    if (active.some(b => {
-      const H = timeToMinutes(b.time);
-      return slotMin >= H && slotMin <= H + BLOCK_HOURS * 60;
-    })) {
+    if (active.some(b => Math.abs(slotMin - timeToMinutes(b.time)) < BLOCK_HOURS * 60)) {
       return new Response(
         JSON.stringify({ error: "slot_blocked" }),
         { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }

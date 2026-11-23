@@ -67,7 +67,7 @@ sequenceDiagram
     participant W as WhatsApp
 
     C->>EF: POST /save-booking (service, date, heure, infos)
-    EF->>EF: Validation zod + règles métier (2/jour, blocage 5h)
+    EF->>EF: Validation zod + règles métier (2/jour, intervalle minimal 6h)
     EF->>DB: INSERT bookings (status=pending)
     EF->>OB: INSERT outbox (booking.created) [même transaction]
     N->>OB: Poll / webhook
@@ -105,21 +105,21 @@ sequenceDiagram
 
 | Colonne | Type | Rôle |
 |---|---|---|
-| `id` | uuid PK | Identifiant |
+| `id` | bigint / int8 PK | Identifiant (conforme au schéma Supabase communiqué) |
 | `client_name`, `phone`, `email` | text | Coordonnées client |
-| `date`, `time` | date, time | Créneau |
+| `date`, `time` | date, time après migration 005 | Le schéma en ligne les stocke actuellement en text ; la migration 005 les convertit pour valider et comparer les créneaux proprement. |
 | `service`, `location`, `comment` | text | Détails |
 | `status` | text | `pending` / `confirmed` / `rejected` / `canceled` |
 | `created_at` | timestamptz | Horodatage |
 
-> Contrainte UNIQUE partielle `(date, time)` sur `pending`/`confirmed` (déjà en place) + CHECK horaires.
+> La migration 005 convertit les champs historiques text `date` et `time`, impose la plage métier 05:00–19:00, puis crée l’index UNIQUE partiel sur `(date, time)`.
 
 ### 3.2 Table `modification_requests` (nouvelle)
 
 | Colonne | Type | Rôle |
 |---|---|---|
 | `id` | uuid PK | Identifiant |
-| `booking_id` | uuid FK → bookings | Réservation concernée |
+| `booking_id` | bigint / int8 FK → bookings | Réservation concernée |
 | `new_date` | date | Nouvelle date souhaitée |
 | `new_time` | time | Nouvelle heure souhaitée |
 | `justification` | text | Justification |
@@ -172,7 +172,7 @@ sequenceDiagram
 5. L'admin voit la demande dans son espace Admin.
 
 ### Acceptation
-- La Edge Function `admin-actions` vérifie la **disponibilité** du nouveau créneau (règles 2/jour + blocage 5h + contrainte UNIQUE).
+- La Edge Function `admin-actions` vérifie la **disponibilité** du nouveau créneau (règles 2/jour + intervalle minimal de 6h + contrainte UNIQUE).
 - Si disponible : met à jour `bookings` (date/time), libère l'ancien créneau (automatique car le créneau change), insère `modification.accepted`.
 - Si indisponible : refuse la modification et demande une nouvelle proposition (`modification.rejected`).
 

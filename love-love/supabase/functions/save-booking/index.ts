@@ -14,12 +14,10 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "https://esm.sh/zod@3.23.8";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const NTFY_TOPIC = Deno.env.get("NTFY_TOPIC") ?? "angemuu-reservations";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "Angemuu <contact@angemuu.net>";
-const MODIFICATION_SECRET = Deno.env.get("MODIFICATION_SECRET") ?? "angemuu-change-me-secret";
 const ADMIN_EMAILS = (Deno.env.get("ADMIN_EMAILS") ?? "murielleangemetiegamkengne@gmail.com,hkouamherve145@gmail.com")
   .split(",").map(s => s.trim()).filter(Boolean);
 const WHATSAPP_TOKEN = Deno.env.get("WHATSAPP_TOKEN") ?? "";
@@ -27,25 +25,10 @@ const WHATSAPP_PHONE_ID = Deno.env.get("WHATSAPP_PHONE_ID") ?? "";
 const WHATSAPP_ADMIN_PHONE = Deno.env.get("WHATSAPP_ADMIN_PHONE") ?? "237656142787";
 const WHATSAPP_TEMPLATE = Deno.env.get("WHATSAPP_TEMPLATE") ?? "nouvelle_reservation";
 
-// Token HMAC pour le lien de modification (sans compte)
-async function signToken(input: string, secret: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(input));
-  const bytes = new Uint8Array(sig);
-  let binary = "";
-  for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 // Schéma de validation des réservations
@@ -53,20 +36,25 @@ const bookingSchema = z.object({
   client_name: z.string().trim().min(2, "Nom trop court").max(120, "Nom trop long"),
   phone: z.string().trim().min(6, "Téléphone invalide").max(30, "Téléphone trop long"),
   email: z.string().trim().email("Email invalide").optional().nullable(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide"),
-  time: z.string().regex(/^\d{2}:\d{2}$/, "Heure invalide"),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide").refine((value) => {
+    const parsedDate = new Date(`${value}T00:00:00.000Z`);
+    return Number.isFinite(parsedDate.getTime()) && parsedDate.toISOString().slice(0, 10) === value;
+  }, "Date invalide"),
+  time: z.string().regex(/^(0[5-9]|1[0-9]):00$/, "Heure indisponible"),
   service: z.string().trim().min(2, "Service requis").max(200, "Service trop long"),
   location: z.string().trim().min(2, "Lieu requis").max(100, "Lieu trop long"),
   comment: z.string().trim().max(1000, "Commentaire trop long").optional().nullable(),
 });
 
-// Règles métier
-const MAX_BOOKINGS_PER_DAY = 2;
-const BLOCK_HOURS = 5;
-
-function timeToMinutes(t: string): number {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + (m || 0);
+function escapeHtml(value: string | null | undefined): string {
+  const entities: Record<string, string> = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;",
+  };
+  return String(value ?? "").replace(/[&<>\"']/g, (character) => entities[character]);
 }
 
 Deno.serve(async (req) => {
@@ -87,101 +75,61 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Vérification des règles métier (limite 2/jour + blocage 5h)
-    // Opérations internes avec la clé service_role (côté serveur) :
-    // l'appelant est anonyme et les RLS réservent le SELECT bookings aux admins.
+    // 2. Réserver atomiquement : disponibilité, jours off, limite journalière,
+    // espacement et insertion sont contrôlés dans la même transaction SQL.
+    if (!SUPABASE_SERVICE_KEY) {
+      console.error("SUPABASE_SERVICE_ROLE_KEY is not configured");
+      return new Response(
+        JSON.stringify({ error: "service_unavailable" }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-
-    const { data: existing, error: fetchError } = await supabase
-      .from("bookings")
-      .select("time, status")
-      .eq("date", parsed.data.date);
-
-    if (fetchError) {
-      return new Response(
-        JSON.stringify({ error: "db_error", message: fetchError.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const active = (existing || []).filter(b => b.status === "pending" || b.status === "confirmed");
-
-    // Limite de RDV par jour
-    if (active.length >= MAX_BOOKINGS_PER_DAY) {
-      return new Response(
-        JSON.stringify({ error: "day_full" }),
-        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Créneau déjà réservé
-    if (active.some(b => b.time === parsed.data.time)) {
-      return new Response(
-        JSON.stringify({ error: "slot_taken" }),
-        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Blocage 5h : un RDV à H bloque [H, H+5h]
-    const slotMin = timeToMinutes(parsed.data.time);
-    const blocked = active.some(b => {
-      const H = timeToMinutes(b.time);
-      return slotMin >= H && slotMin <= H + BLOCK_HOURS * 60;
+    const { data: reservationResult, error } = await supabase.rpc("create_booking_atomic", {
+      p_client_name: parsed.data.client_name,
+      p_phone: parsed.data.phone,
+      p_email: parsed.data.email ?? null,
+      p_date: parsed.data.date,
+      p_time: parsed.data.time,
+      p_service: parsed.data.service,
+      p_location: parsed.data.location,
+      p_comment: parsed.data.comment ?? null,
     });
-    if (blocked) {
-      return new Response(
-        JSON.stringify({ error: "slot_blocked" }),
-        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // 3. Insertion
-    const { data, error } = await supabase
-      .from("bookings")
-      .insert([{ ...parsed.data, status: "pending" }])
-      .select()
-      .single();
 
     if (error) {
-      // 23505 = violation de contrainte UNIQUE -> créneau déjà pris
-      if (error.code === "23505") {
-        return new Response(
-          JSON.stringify({ error: "slot_taken" }),
-          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      console.error("Erreur création réservation:", error);
       return new Response(
-        JSON.stringify({ error: "db_error", message: error.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "booking_unavailable" }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // 4. Outbox : événement booking.created (pour n8n)
-    try {
-      await supabase.from("outbox_events").insert({
-        event_type: "booking.created",
-        payload: {
-          booking_id: data.id,
-          client_name: parsed.data.client_name,
-          email: parsed.data.email,
-          date: parsed.data.date,
-          time: parsed.data.time,
-          service: parsed.data.service,
-        },
-        status: "pending",
-      });
-    } catch (e) {
-      console.error("outbox error:", e);
+    if (!reservationResult?.ok) {
+      const conflictStatuses: Record<string, number> = {
+        slot_taken: 409,
+        slot_blocked: 409,
+        day_full: 409,
+        date_unavailable: 409,
+        date_in_past: 400,
+        invalid_time: 400,
+      };
+      const reason = reservationResult?.error ?? "booking_unavailable";
+      return new Response(
+        JSON.stringify({ error: reason }),
+        { status: conflictStatuses[reason] ?? 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
+    const data = reservationResult.booking;
+
+    // Notifications réseau en arrière-plan : elles ne doivent pas faire attendre
+    // la cliente après que sa demande a déjà été enregistrée.
+    EdgeRuntime.waitUntil((async () => {
     // 5. Email de réception (Resend) — transitoire, en attendant n8n
     if (RESEND_API_KEY && parsed.data.email) {
       try {
-        // Lien de modification (token HMAC) — page modification.html (Phase E)
-        const token = await signToken(String(data.id), MODIFICATION_SECRET);
-        const modifLink = `https://angemuu.net/modification.html?b=${data.id}&t=${encodeURIComponent(token)}`;
-
-        await fetch("https://api.resend.com/emails", {
+        const response = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${RESEND_API_KEY}`,
@@ -191,20 +139,19 @@ Deno.serve(async (req) => {
             from: RESEND_FROM,
             to: [parsed.data.email],
             subject: "Votre demande de réservation — Ange Muu",
-            html: `<p>Bonjour <strong>${parsed.data.client_name}</strong>,</p>
+            html: `<p>Bonjour <strong>${escapeHtml(parsed.data.client_name)}</strong>,</p>
                    <p>Nous avons bien reçu votre demande de réservation :</p>
                    <ul>
-                     <li>Service : ${parsed.data.service}</li>
-                     <li>Date : ${parsed.data.date}</li>
-                     <li>Heure : ${parsed.data.time}</li>
-                     <li>Lieu : ${parsed.data.location}</li>
+                     <li>Service : ${escapeHtml(parsed.data.service)}</li>
+                     <li>Date : ${escapeHtml(parsed.data.date)}</li>
+                     <li>Heure : ${escapeHtml(parsed.data.time)}</li>
+                     <li>Lieu : ${escapeHtml(parsed.data.location)}</li>
                    </ul>
                    <p>Nous vous confirmerons votre rendez-vous très prochainement.</p>
-                   <p>Pour <strong>modifier</strong> votre réservation (sans créer de compte), cliquez ici :
-                      <a href="${modifLink}">Modifier ma réservation</a></p>
                    <p>À bientôt,<br>L'équipe Ange Muu</p>`,
           }),
         });
+        if (!response.ok) console.error("Resend a refusé l'email client:", response.status, await response.text());
       } catch (e) {
         console.error("resend error:", e);
       }
@@ -213,7 +160,7 @@ Deno.serve(async (req) => {
     // 6. Notification ADMIN par email (Resend) — à chaque réservation
     if (RESEND_API_KEY && ADMIN_EMAILS.length) {
       try {
-        await fetch("https://api.resend.com/emails", {
+        const response = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${RESEND_API_KEY}`,
@@ -225,17 +172,18 @@ Deno.serve(async (req) => {
             subject: "🔔 Nouvelle réservation — Ange Muu",
             html: `<p><strong>Nouvelle réservation reçue :</strong></p>
                    <ul>
-                     <li>Client : ${parsed.data.client_name}</li>
-                     <li>Téléphone : ${parsed.data.phone}</li>
-                     <li>Email : ${parsed.data.email || "non renseigné"}</li>
-                     <li>Service : ${parsed.data.service}</li>
-                     <li>Date : ${parsed.data.date} à ${parsed.data.time}</li>
-                     <li>Lieu : ${parsed.data.location}</li>
-                     <li>Commentaire : ${parsed.data.comment || "aucun"}</li>
+                     <li>Client : ${escapeHtml(parsed.data.client_name)}</li>
+                     <li>Téléphone : ${escapeHtml(parsed.data.phone)}</li>
+                     <li>Email : ${escapeHtml(parsed.data.email || "non renseigné")}</li>
+                     <li>Service : ${escapeHtml(parsed.data.service)}</li>
+                     <li>Date : ${escapeHtml(parsed.data.date)} à ${escapeHtml(parsed.data.time)}</li>
+                     <li>Lieu : ${escapeHtml(parsed.data.location)}</li>
+                     <li>Commentaire : ${escapeHtml(parsed.data.comment || "aucun")}</li>
                    </ul>
                    <p><a href="https://angemuu.net/admin/">Ouvrir l'espace Admin</a> pour confirmer.</p>`,
           }),
         });
+        if (!response.ok) console.error("Resend a refusé l'email admin:", response.status, await response.text());
       } catch (e) {
         console.error("resend admin error:", e);
       }
@@ -288,6 +236,7 @@ Deno.serve(async (req) => {
     } catch (e) {
       console.error("ntfy error:", e);
     }
+    })().catch((e) => console.error("Erreur notifications en arrière-plan:", e)));
 
     return new Response(
       JSON.stringify({ ok: true, booking: data }),

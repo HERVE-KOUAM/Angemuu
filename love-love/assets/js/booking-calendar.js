@@ -8,29 +8,51 @@ const CalendarState = {
     viewMonth: new Date().getMonth(), // 0-11
     selectedDate: null,               // 'YYYY-MM-DD'
     offDays: [],                      // dates off
-    dayBookings: {}                   // { 'YYYY-MM-DD': [bookings] }
+    dayBookings: {},                  // { 'YYYY-MM-DD': [bookings] }
+    loadError: false,
+    loadVersion: 0
 };
 
 const CAL_MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const CAL_DAYS = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
 
 // Charge les données (off_days + bookings) depuis Supabase
-async function loadCalendarData() {
+async function loadCalendarData(year = CalendarState.viewYear, month = CalendarState.viewMonth) {
+    const loadVersion = ++CalendarState.loadVersion;
+    const rangeStart = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const rangeEnd = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
     try {
         const [offRes, bookRes] = await Promise.all([
             window.supabaseClient.from('off_days').select('off_date'),
-            window.supabaseClient.from('bookings').select('date, time, status')
+            window.supabaseClient.rpc('get_public_booking_availability', {
+                p_start_date: rangeStart,
+                p_end_date: rangeEnd
+            })
         ]);
+
+        if (loadVersion !== CalendarState.loadVersion) return false;
+        if (offRes.error || bookRes.error) {
+            console.error('Erreur chargement disponibilités:', offRes.error || bookRes.error);
+            CalendarState.loadError = true;
+            return false;
+        }
 
         CalendarState.offDays = (offRes.data || []).map(d => d.off_date);
 
         CalendarState.dayBookings = {};
         (bookRes.data || []).forEach(b => {
-            if (!CalendarState.dayBookings[b.date]) CalendarState.dayBookings[b.date] = [];
-            CalendarState.dayBookings[b.date].push(b);
+            const date = b.booking_date;
+            if (!CalendarState.dayBookings[date]) CalendarState.dayBookings[date] = [];
+            CalendarState.dayBookings[date].push({ time: String(b.booking_time).slice(0, 5), status: 'confirmed' });
         });
+        CalendarState.loadError = false;
+        return true;
     } catch (e) {
         console.error('Erreur chargement données calendrier:', e);
+        if (loadVersion === CalendarState.loadVersion) CalendarState.loadError = true;
+        return false;
     }
 }
 
@@ -39,6 +61,11 @@ async function loadCalendarData() {
 function renderCalendar(containerId, selectable) {
     const container = document.getElementById(containerId);
     if (!container) return;
+
+    if (CalendarState.loadError) {
+        container.innerHTML = '<div class="sc-calendar-error" role="alert"><p>Impossible de charger les disponibilités pour le moment.</p><button type="button" class="sc-calendar-retry" data-calendar-retry>Réessayer</button></div>';
+        return;
+    }
 
     const year = CalendarState.viewYear;
     const month = CalendarState.viewMonth;
@@ -89,7 +116,7 @@ function renderCalendar(containerId, selectable) {
 }
 
 // Navigation mois précédent / suivant
-function calendarNav(dir, containerId, selectable) {
+async function calendarNav(dir, containerId, selectable) {
     CalendarState.viewMonth += dir;
     if (CalendarState.viewMonth < 0) {
         CalendarState.viewMonth = 11;
@@ -98,6 +125,10 @@ function calendarNav(dir, containerId, selectable) {
         CalendarState.viewMonth = 0;
         CalendarState.viewYear++;
     }
+    const container = document.getElementById(containerId);
+    if (container) container.setAttribute('aria-busy', 'true');
+    await loadCalendarData(CalendarState.viewYear, CalendarState.viewMonth);
+    if (container) container.removeAttribute('aria-busy');
     renderCalendar(containerId, selectable);
 }
 
@@ -107,6 +138,8 @@ function selectCalendarDate(dateStr, containerId) {
 
     const input = document.getElementById('booking-date-input');
     if (input) input.value = dateStr;
+    const timeInput = document.getElementById('booking-time-input');
+    if (timeInput) timeInput.value = '';
 
     // Afficher les créneaux de la date
     if (typeof renderSlotsForDate === 'function') {
@@ -123,11 +156,16 @@ async function initCalendar(containerId, selectable) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    await loadCalendarData();
+    await loadCalendarData(CalendarState.viewYear, CalendarState.viewMonth);
 
     if (!container.dataset.calendarReady) {
         container.dataset.calendarReady = '1';
         container.addEventListener('click', function(e) {
+            const retryBtn = e.target.closest('[data-calendar-retry]');
+            if (retryBtn) {
+                initCalendar(containerId, selectable);
+                return;
+            }
             const navBtn = e.target.closest('[data-nav]');
             if (navBtn) {
                 calendarNav(parseInt(navBtn.dataset.nav, 10), containerId, selectable);

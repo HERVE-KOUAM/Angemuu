@@ -31,7 +31,7 @@ const actionSchema = z.object({
 
 // Règles métier partagées
 const MAX_BOOKINGS_PER_DAY = 2;
-const BLOCK_HOURS = 5;
+const BLOCK_HOURS = 6;
 
 function timeToMinutes(t: string): number {
   const [h, m] = t.split(":").map(Number);
@@ -150,7 +150,11 @@ Deno.serve(async (req) => {
 
     let valid = true;
     let reason = "";
-    if (active.length >= MAX_BOOKINGS_PER_DAY) {
+    const requestedTime = String(mod.new_time).slice(0, 5);
+    if (!/^(0[5-9]|1[0-9]):00$/.test(requestedTime)) {
+      valid = false;
+      reason = "invalid_time";
+    } else if (active.length >= MAX_BOOKINGS_PER_DAY) {
       valid = false;
       reason = "day_full";
     } else if (active.some(b => b.time === mod.new_time)) {
@@ -158,10 +162,7 @@ Deno.serve(async (req) => {
       reason = "slot_taken";
     } else {
       const slotMin = timeToMinutes(mod.new_time);
-      if (active.some(b => {
-        const H = timeToMinutes(b.time);
-        return slotMin >= H && slotMin <= H + BLOCK_HOURS * 60;
-      })) {
+      if (active.some(b => Math.abs(slotMin - timeToMinutes(b.time)) < BLOCK_HOURS * 60)) {
         valid = false;
         reason = "slot_blocked";
       }

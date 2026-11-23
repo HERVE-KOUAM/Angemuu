@@ -1,17 +1,17 @@
 // ============================================================
 // LOGIQUE MÉTIER DES CRÉNEAUX DE RÉSERVATION
 // Règles :
-//  - Créneaux toutes les heures de 08:00 à 19:00
+//  - Créneaux toutes les heures de 05:00 à 19:00
 //  - 2 RDV max par jour
-//  - Un RDV à H bloque les 5h suivantes [H, H+5h]
+//  - Au moins 6h entre deux rendez-vous
 // ============================================================
 
 const BOOKING_CONFIG = {
-    OPEN_HOUR: 8,          // 08:00
+    OPEN_HOUR: 5,          // 05:00
     CLOSE_HOUR: 19,        // 19:00 (dernier créneau)
     SLOT_STEP_HOURS: 1,    // toutes les 1h
     MAX_BOOKINGS_PER_DAY: 2,
-    BLOCK_HOURS: 5         // blocage des 5h suivantes
+    BLOCK_HOURS: 6         // intervalle minimal entre deux RDV
 };
 
 // Génère la liste des créneaux horaires "HH:MM"
@@ -50,8 +50,8 @@ function computeDaySlots(bookings) {
                 available = false;
                 reason = 'booked';
             }
-            // 2. Blocage 5h : un RDV à H bloque [H, H+5h]
-            else if (startTimes.some(H => slotMin >= H && slotMin <= H + BOOKING_CONFIG.BLOCK_HOURS * 60)) {
+            // 2. Un autre RDV est possible exactement 6h avant ou après.
+            else if (startTimes.some(H => Math.abs(slotMin - H) < BOOKING_CONFIG.BLOCK_HOURS * 60)) {
                 available = false;
                 reason = 'blocked';
             }
@@ -99,8 +99,8 @@ function isSlotValid(dateStr, time, bookings) {
         return { valid: false, reason: 'slot_taken' };
     }
 
-    // Blocage 5h
-    if (startTimes.some(H => slotMin >= H && slotMin <= H + BOOKING_CONFIG.BLOCK_HOURS * 60)) {
+    // Un autre RDV est possible exactement 6h avant ou après.
+    if (startTimes.some(H => Math.abs(slotMin - H) < BOOKING_CONFIG.BLOCK_HOURS * 60)) {
         return { valid: false, reason: 'slot_blocked' };
     }
 

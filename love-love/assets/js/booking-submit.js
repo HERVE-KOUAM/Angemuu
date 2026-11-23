@@ -1,107 +1,189 @@
 document.addEventListener('DOMContentLoaded', function() {
     const bookingForm = document.getElementById('booking-form');
+    const feedback = document.getElementById('booking-feedback');
+    const feedbackTitle = document.getElementById('booking-feedback-title');
+    const feedbackMessage = document.getElementById('booking-feedback-message');
+    const whatsappLink = document.getElementById('booking-whatsapp-link');
+    const newRequestButton = document.getElementById('booking-new-request');
+    const submitButton = bookingForm?.querySelector('[type="submit"]');
+    let isSubmitting = false;
 
-    // Initialisation du calendrier public (style shadcn) + créneaux
     initCalendar('booking-date-picker', true);
     const slotsShell = document.getElementById('booking-slots');
     if (slotsShell) slotsShell.innerHTML = '<p class="sc-slots-hint">Sélectionnez une date pour voir les créneaux disponibles.</p>';
 
-    if (bookingForm) {
-        bookingForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            // Récupération des valeurs
-            const formData = new FormData(bookingForm);
-            const data = Object.fromEntries(formData.entries());
-            
-            const clientName = data.clientName ? data.clientName.trim() : '';
-            const phone = (data.phonePrefix + ' ' + data.phoneNumber).trim();
-            const date = data.date || '';
-            const time = data.time || '';
-            const email = data.email ? data.email.trim() : null;
-            const service = data.service ? data.service.trim() : '';
-            const location = data.location || 'Chez Ange Muu';
-            const comment = data.comment ? data.comment.trim() : '';
+    function formatDate(dateValue) {
+        const parsed = new Date(`${dateValue}T00:00:00`);
+        return Number.isNaN(parsed.getTime())
+            ? dateValue
+            : parsed.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
 
-            // Validation de base
-            if (!clientName || !data.phoneNumber || !date || !time || !service) {
-                alert('Veuillez remplir tous les champs obligatoires.');
-                return;
+    function makeWhatsAppUrl(message) {
+        return `https://wa.me/237656142787?text=${encodeURIComponent(message)}`;
+    }
+
+    function showFeedback(type, title, message, whatsappMessage, canStartOver) {
+        if (!feedback) return;
+        feedback.classList.toggle('is-error', type === 'error');
+        feedback.setAttribute('role', type === 'error' ? 'alert' : 'status');
+        feedbackTitle.textContent = title;
+        feedbackMessage.textContent = message;
+        feedback.hidden = false;
+
+        whatsappLink.href = makeWhatsAppUrl(whatsappMessage);
+        whatsappLink.hidden = false;
+        whatsappLink.textContent = type === 'success' ? 'Continuer sur WhatsApp' : 'Demander de l’aide sur WhatsApp';
+        newRequestButton.hidden = !canStartOver;
+        feedback.focus();
+    }
+
+    function explainFailure(code) {
+        const messages = {
+            slot_taken: 'Ce créneau vient d’être réservé. Choisissez une autre heure.',
+            slot_blocked: 'Un autre rendez-vous est trop proche de cette heure. Choisissez un autre créneau.',
+            day_full: 'Cette journée vient d’atteindre sa limite de rendez-vous. Choisissez une autre date.',
+            date_unavailable: 'Cette date n’est plus disponible. Choisissez une autre date.',
+            date_in_past: 'La date choisie est passée. Choisissez une date à venir.',
+            invalid_time: 'Cette heure n’est pas disponible. Choisissez un créneau proposé dans le calendrier.'
+        };
+        return messages[code] || 'Nous n’avons pas pu confirmer l’enregistrement de votre demande. Contactez-nous sur WhatsApp pour vérifier avant de la renvoyer.';
+    }
+
+    async function readErrorPayload(error, responseData) {
+        if (responseData?.error) return responseData;
+        const response = error?.context;
+        if (response && typeof response.clone === 'function') {
+            try {
+                return await response.clone().json();
+            } catch (_) {
+                // L’erreur réseau sera expliquée avec le message générique.
             }
+        }
+        return {};
+    }
 
-            // --- TENTATIVE D'INSERTION VIA EDGE FUNCTION (validation serveur) ---
-            // La fonction save-booking valide les données (zod), insère la réservation
-            // de façon atomique (contrainte UNIQUE partielle) et notifie l'admin (ntfy).
-            let dbError = null;
-            if (typeof window.supabaseClient !== 'undefined') {
-                const { data, error } = await window.supabaseClient.functions.invoke('save-booking', {
-                    body: {
-                        client_name: clientName,
-                        phone: phone,
-                        email: email,
-                        date: date,
-                        time: time,
-                        service: service,
-                        location: location,
-                        comment: comment
-                    }
-                });
+    if (newRequestButton) {
+        newRequestButton.addEventListener('click', function() {
+            bookingForm.reset();
+            bookingForm.hidden = false;
+            feedback.hidden = true;
+            feedback.classList.remove('is-error');
+            if (feedbackMessage) feedbackMessage.textContent = '';
+            if (whatsappLink) whatsappLink.hidden = true;
+            if (newRequestButton) newRequestButton.hidden = true;
 
-                // Erreurs métier (validation serveur)
-                if (data && data.error === 'slot_taken') {
-                    alert('❌ Ce créneau (date et heure) est déjà réservé. Veuillez choisir un autre créneau.');
-                    return;
-                }
-                if (data && data.error === 'slot_blocked') {
-                    alert('❌ Ce créneau est dans l\'intervalle de 5h d\'un rendez-vous existant. Choisissez un autre créneau.');
-                    return;
-                }
-                if (data && data.error === 'day_full') {
-                    alert('❌ Cette journée a déjà atteint sa limite de rendez-vous. Choisissez une autre date.');
-                    return;
-                }
-
-                if (error) {
-                    console.error('Erreur Edge Function :', error);
-                    dbError = (data && data.message) || error.message || 'Erreur lors de l\'enregistrement';
-                } else if (data && data.error) {
-                    console.error('Erreur Edge Function :', data);
-                    dbError = data.message || data.error;
-                }
-            } else {
-                dbError = 'supabaseClient non défini';
-            }
-
-            // --- CONSTRUCTION DU MESSAGE WHATSAPP ---
-            const message = '*NOUVELLE RÉSERVATION — Ange Muu*\n' +
-                            '─────────────────────────────\n' +
-                            '*Nom :* ' + clientName + '\n' +
-                            '*Téléphone :* ' + phone + '\n' +
-                            '*Date :* ' + date + '\n' +
-                            '*Heure :* ' + time + '\n' +
-                            '*Email :* ' + (email || 'Non renseigné') + '\n' +
-                            '*Service :* ' + service + '\n' +
-                            '*Lieu :* ' + location + '\n' +
-                            '*Commentaire :* ' + (comment || 'Aucun') + '\n' +
-                            '─────────────────────────────';
-            
-            const numeroWhatsApp = '237656142787';
-            const url = 'https://wa.me/' + numeroWhatsApp + '?text=' + encodeURIComponent(message);
-            
-            // --- REDIRECTION ET FEEDBACK ---
-            if (dbError) {
-                alert('⚠️ Votre réservation a été transmise par WhatsApp, mais une erreur technique a empêché l\'enregistrement dans notre base de données (Erreur: ' + dbError + ').');
-            } else {
-                alert('✅ Votre réservation a bien été enregistrée et transmise !');
-                bookingForm.reset();
-            }
-
-            // Redirection toujours exécutée
-            window.open(url, '_blank');
+            CalendarState.selectedDate = null;
+            renderCalendar('booking-date-picker', true);
+            if (slotsShell) slotsShell.innerHTML = '<p class="sc-slots-hint">Sélectionnez une date pour voir les créneaux disponibles.</p>';
+            bookingForm.querySelector('[name="clientName"]')?.focus();
         });
     }
+
+    if (!bookingForm) return;
+
+    bookingForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        if (isSubmitting) return;
+
+        const formData = new FormData(bookingForm);
+        const fields = Object.fromEntries(formData.entries());
+        const clientName = String(fields.clientName || '').trim();
+        const phone = `${fields.phonePrefix || ''} ${fields.phoneNumber || ''}`.trim();
+        const date = String(fields.date || '');
+        const time = String(fields.time || '');
+        const email = String(fields.email || '').trim() || null;
+        const service = String(fields.service || '').trim();
+        const location = String(fields.location || 'Chez Ange Muu');
+        const comment = String(fields.comment || '').trim();
+
+        if (!clientName || !fields.phoneNumber || !date || !time || !service) {
+            showFeedback('error', 'Il manque une information', 'Renseignez votre nom, votre téléphone, un créneau et le service souhaité.', 'Bonjour Ange Muu, pouvez-vous m’aider à prendre rendez-vous ?', false);
+            feedback?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        const appointmentDetails = [
+            '*Demande de rendez-vous — Ange Muu*',
+            `*Nom :* ${clientName}`,
+            `*Téléphone :* ${phone}`,
+            `*Service :* ${service}`,
+            `*Date :* ${formatDate(date)}`,
+            `*Heure :* ${time}`,
+            `*Lieu :* ${location}`,
+            `*Email :* ${email || 'Non renseigné'}`,
+            `*Détail :* ${comment || 'Aucun'}`
+        ].join('\n');
+
+        isSubmitting = true;
+        bookingForm.setAttribute('aria-busy', 'true');
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.textContent = 'Enregistrement…';
+        }
+
+        let responseData = null;
+        let requestError = null;
+        try {
+            if (!window.supabaseClient) throw new Error('Service de réservation indisponible');
+
+            const response = await window.supabaseClient.functions.invoke('save-booking', {
+                body: {
+                    client_name: clientName,
+                    phone,
+                    email,
+                    date,
+                    time,
+                    service,
+                    location,
+                    comment
+                }
+            });
+            responseData = response.data;
+            requestError = response.error;
+        } catch (error) {
+            requestError = error;
+        }
+
+        if (requestError || !responseData?.ok || !responseData?.booking?.id) {
+            console.error('Échec de la réservation :', requestError || responseData);
+            const errorPayload = await readErrorPayload(requestError, responseData);
+            const failureMessage = explainFailure(errorPayload.error);
+            const helpMessage = [
+                'Bonjour Ange Muu, je n’ai pas reçu de confirmation après ma demande en ligne. Pouvez-vous vérifier si elle a été enregistrée ?',
+                appointmentDetails
+            ].join('\n\n');
+            showFeedback('error', 'La demande n’est pas encore confirmée', failureMessage, helpMessage, false);
+            if (['date_unavailable', 'date_in_past'].includes(errorPayload.error)) {
+                CalendarState.selectedDate = null;
+                document.getElementById('booking-date-input').value = '';
+                document.getElementById('booking-time-input').value = '';
+                if (slotsShell) slotsShell.innerHTML = '<p class="sc-slots-hint">Sélectionnez une date pour voir les créneaux disponibles.</p>';
+                await initCalendar('booking-date-picker', true);
+            } else if (['slot_taken', 'slot_blocked', 'day_full'].includes(errorPayload.error)) {
+                await Promise.all([
+                    initCalendar('booking-date-picker', true),
+                    window.supabaseClient ? renderSlotsForDate(date) : Promise.resolve()
+                ]);
+            }
+            feedback?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            showFeedback(
+                'success',
+                'Votre demande est enregistrée',
+                `Merci ${clientName}. Votre rendez-vous du ${formatDate(date)} à ${time} est en attente de confirmation par Ange Muu.`,
+                `Bonjour Ange Muu, je viens d’envoyer une demande de rendez-vous et j’attends votre confirmation.\n\n${appointmentDetails}`,
+                true
+            );
+            bookingForm.hidden = true;
+            feedback?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        isSubmitting = false;
+        bookingForm.removeAttribute('aria-busy');
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Prendre RDV';
+        }
+    });
 });
-
-
-// Le calendrier public et les créneaux sont gérés par
-// booking-calendar.js et booking-slots.js (style shadcn).

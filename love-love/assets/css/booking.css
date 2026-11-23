@@ -111,6 +111,122 @@
     padding: 12px 28px;
 }
 
+.booking-feedback[hidden] {
+    display: none;
+}
+
+.booking-feedback {
+    position: relative;
+    max-width: 620px;
+    margin: 1.25rem auto 0;
+    padding: 1.5rem 1.5rem 1.5rem 4.5rem;
+    border: 1px solid #d8e8dc;
+    border-radius: 18px;
+    background: linear-gradient(120deg, #fff 0%, #f3faf4 100%);
+    box-shadow: 0 12px 30px rgba(39, 82, 52, 0.08);
+}
+
+.booking-feedback.is-error {
+    border-color: #efd0cc;
+    background: linear-gradient(120deg, #fff 0%, #fff6f4 100%);
+    box-shadow: 0 12px 30px rgba(125, 49, 43, 0.07);
+}
+
+.booking-feedback-mark {
+    position: absolute;
+    top: 1.55rem;
+    left: 1.5rem;
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: 50%;
+    background: #e0f1e4;
+}
+
+.booking-feedback-mark::before {
+    content: "✓";
+    color: #39724a;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.booking-feedback.is-error .booking-feedback-mark {
+    background: #f7e3df;
+}
+
+.booking-feedback.is-error .booking-feedback-mark::before {
+    content: "!";
+    color: #9a453d;
+}
+
+.booking-feedback h5 {
+    margin: 0 0 0.45rem;
+    color: #344c38;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.25rem;
+}
+
+.booking-feedback.is-error h5 {
+    color: #743c37;
+}
+
+.booking-feedback p {
+    margin: 0 0 1rem;
+    color: #51424a;
+    line-height: 1.6;
+}
+
+.booking-feedback .booking-whatsapp-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    margin: 0.2rem 0.5rem 0.2rem 0;
+    background: #236b4b;
+    color: #fff !important;
+    text-decoration: none;
+}
+
+.booking-feedback .booking-whatsapp-link:hover,
+.booking-feedback .booking-whatsapp-link:focus-visible {
+    background: #19573c;
+}
+
+.booking-new-request {
+    min-height: 44px;
+    padding: 0.65rem 1rem;
+    border: 1px solid #d8e8dc;
+    border-radius: 999px;
+    background: #fff;
+    color: #344c38;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.booking-new-request:hover,
+.booking-new-request:focus-visible {
+    border-color: #87a990;
+    background: #f8fcf8;
+}
+
+.booking-feedback :focus-visible,
+.booking-new-request:focus-visible {
+    outline: 3px solid #527d5d;
+    outline-offset: 3px;
+}
+
+@media (max-width: 575.98px) {
+    .booking-feedback {
+        padding: 1.2rem 1rem 1.25rem 3.6rem;
+    }
+
+    .booking-feedback-mark {
+        top: 1.25rem;
+        left: 1rem;
+    }
+}
+
 .booking-card {
     background: #fff;
     border-radius: 18px;

@@ -24,7 +24,7 @@ alter table public.bookings
 
 alter table public.bookings
     add constraint bookings_time_check
-    check (time between '08:00' and '19:00');
+    check (time between '05:00' and '19:00');
 
 -- ------------------------------------------------------------------
 -- NOTE : si l'ajout de la contrainte UNIQUE échoue, c'est qu'il existe

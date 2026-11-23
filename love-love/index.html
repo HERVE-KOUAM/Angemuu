@@ -80,8 +80,8 @@
     <link href="assets/css/odometer-theme-default.css" rel="stylesheet">
     <link href="assets/css/jquery-ui.css" rel="stylesheet">
     <link href="assets/sass/style.css" rel="stylesheet">
-    <link href="assets/css/booking.css" rel="stylesheet">
-    <link href="assets/css/booking-calendar.css" rel="stylesheet">
+    <link href="assets/css/booking.css?v=4" rel="stylesheet">
+    <link href="assets/css/booking-calendar.css?v=2" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Matomo -->
@@ -361,6 +361,13 @@
                                                 <button type="submit" class="theme-btn">Prendre RDV</button>
                                             </div>
                                         </form>
+                                        <section id="booking-feedback" class="booking-feedback" role="status" aria-live="polite" tabindex="-1" hidden>
+                                            <span class="booking-feedback-mark" aria-hidden="true"></span>
+                                            <h5 id="booking-feedback-title"></h5>
+                                            <p id="booking-feedback-message"></p>
+                                            <a id="booking-whatsapp-link" class="theme-btn booking-whatsapp-link" target="_blank" rel="noopener noreferrer" hidden>Continuer sur WhatsApp</a>
+                                            <button id="booking-new-request" class="booking-new-request" type="button" hidden>Faire une autre demande</button>
+                                        </section>
                                     </div>
                                 </div>
                             </div>
@@ -542,9 +549,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="assets/js/supabase-client.js"></script>
     <script src="assets/js/booking-logic.js"></script>
-    <script src="assets/js/booking-calendar.js"></script>
-    <script src="assets/js/booking-slots.js"></script>
-    <script src="assets/js/booking-submit.js"></script>
+    <script src="assets/js/booking-calendar.js?v=2"></script>
+    <script src="assets/js/booking-slots.js?v=2"></script>
+    <script src="assets/js/booking-submit.js?v=2"></script>
 </body>
 
 

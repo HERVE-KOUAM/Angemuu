@@ -50,6 +50,46 @@
     border-color: #cbd5e1;
 }
 
+.sc-cal-nav:focus-visible,
+.sc-calendar-retry:focus-visible,
+.sc-slots-error button:focus-visible {
+    outline: 3px solid #527d5d;
+    outline-offset: 2px;
+}
+
+.sc-calendar-error,
+.sc-slots-error {
+    padding: 0.9rem 1rem;
+    border: 1px solid #efd0cc;
+    border-radius: 0.75rem;
+    background: #fff8f6;
+    color: #743c37;
+}
+
+.sc-calendar-error p,
+.sc-slots-error p {
+    margin: 0 0 0.65rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.sc-calendar-retry,
+.sc-slots-error button {
+    padding: 0.4rem 0.75rem;
+    border: 1px solid #d9b5ad;
+    border-radius: 999px;
+    background: #fff;
+    color: #743c37;
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.sc-calendar-shell[aria-busy="true"],
+.sc-slots-shell[aria-busy="true"] {
+    cursor: progress;
+}
+
 .sc-cal-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);

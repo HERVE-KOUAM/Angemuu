@@ -93,7 +93,7 @@ Options classées par fiabilité :
 ### 2.6 Pagination + horaires (P7/P10)
 
 - `booking-admin.js` : ajouter `.range(offset, offset+limit)` et un sélecteur de filtre par statut (`pending`, `confirmed`, `canceled`) — API native Supabase, aucun dépôt.
-- Migration : contrainte `CHECK (time between '08:00' and '19:00')` (ajustable) sur `bookings`.
+- Migration : contrainte `CHECK (time between '05:00' and '19:00')` sur `bookings`.
 
 ---
 
