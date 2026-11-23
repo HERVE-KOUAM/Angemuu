@@ -20,6 +20,7 @@ let selectedOffDates = [];
 let currentPage = 0;
 const PAGE_SIZE = 20;
 let statusFilter = 'all';
+let bookingSort = 'date_asc';
 
 
 // ============================================================
@@ -51,11 +52,22 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!btn) return;
             const action = btn.dataset.action;
             const id = btn.dataset.id;
-            if (action === 'confirm') updateBooking(id, 'confirmed');
+            if (action === 'confirm') updateBooking(id, 'confirmed', btn);
+            else if (action === 'resend-email') updateBooking(id, 'resend_confirmation', btn);
             else if (action === 'cancel') updateBooking(id, 'canceled');
             else if (action === 'delete') deleteBooking(id);
             else if (action === 'prev') prevPage();
             else if (action === 'next') nextPage();
+        });
+    }
+
+    const sort = document.getElementById('booking-sort');
+    if (sort && !sort.dataset.sortReady) {
+        sort.dataset.sortReady = '1';
+        sort.addEventListener('change', function() {
+            bookingSort = this.value;
+            currentPage = 0;
+            renderBookings();
         });
     }
 
@@ -394,9 +406,16 @@ async function renderBookings() {
         query = query.eq('status', statusFilter);
     }
 
+    const sortOptions = {
+        date_asc: [['date', true], ['time', true]],
+        date_desc: [['date', false], ['time', false]],
+        created_desc: [['created_at', false]],
+        name_asc: [['client_name', true]]
+    };
+    for (const [column, ascending] of sortOptions[bookingSort] || sortOptions.date_asc) {
+        query = query.order(column, { ascending });
+    }
     const { data: bookings, error, count } = await query
-        .order('date', { ascending: true })
-        .order('time', { ascending: true })
         .range(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE - 1);
 
     if (error) {
@@ -431,8 +450,9 @@ async function renderBookings() {
                 <p class="mb-2"><strong>Statut :</strong> ${escapeHtml(booking.status || 'pending')}</p>
 
                 <div class="btn-group">
-                    <button class="btn btn-sm btn-success" data-action="confirm" data-id="${booking.id}">Confirmer</button>
-                    <button class="btn btn-sm btn-warning" data-action="cancel" data-id="${booking.id}">Annuler</button>
+                    ${booking.status === 'pending' ? `<button class="btn btn-sm btn-success" data-action="confirm" data-id="${booking.id}">Confirmer</button>` : ''}
+                    ${booking.status === 'confirmed' ? `<button class="btn btn-sm btn-outline-primary" data-action="resend-email" data-id="${booking.id}">Renvoyer les courriels</button>` : ''}
+                    ${booking.status === 'pending' || booking.status === 'confirmed' ? `<button class="btn btn-sm btn-warning" data-action="cancel" data-id="${booking.id}">Annuler</button>` : ''}
                     <button class="btn btn-sm btn-danger" data-action="delete" data-id="${booking.id}">Supprimer</button>
                 </div>
             </div>
@@ -494,9 +514,19 @@ async function ensureAdminSession() {
     return true;
 }
 
-async function updateBooking(id, status) {
+async function updateBooking(id, status, button) {
     const ok = await ensureAdminSession();
     if (!ok) return;
+
+    const message = document.getElementById('booking-action-message');
+    if (message) {
+        message.className = 'small mb-3 text-muted';
+        message.textContent = status === 'resend_confirmation' ? 'Envoi des courriels…' : 'Enregistrement de la confirmation…';
+    }
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'En cours…';
+    }
 
     // Passage par la Edge Function admin-actions : met à jour le statut
     // ET émet l'événement outbox (booking.confirmed / booking.canceled).
@@ -507,8 +537,35 @@ async function updateBooking(id, status) {
 
     if (error) {
         console.error('Erreur admin-actions:', error);
-        alert('Impossible de modifier la réservation : ' + ((res && res.message) || error.message));
+        if (message) {
+            message.className = 'small mb-3 text-danger';
+            message.textContent = status === 'resend_confirmation' ? 'Le renvoi des courriels a échoué. Réessayez.' : 'La confirmation n’a pas été enregistrée. Réessayez.';
+        }
+        if (button) {
+            button.disabled = false;
+            button.textContent = status === 'resend_confirmation' ? 'Renvoyer les courriels' : 'Confirmer';
+        }
         return;
+    }
+
+    if (message && (status === 'confirmed' || status === 'resend_confirmation')) {
+        const email = res && res.email;
+        message.className = 'small mb-3 ' + (email && (email.client === 'failed' || email.admin === 'failed') ? 'text-warning' : 'text-success');
+        if (res && res.already_processed) {
+            message.textContent = 'Cette réservation avait déjà été traitée.';
+        } else if (email && email.client === 'sent' && email.admin === 'sent') {
+            message.textContent = 'Réservation confirmée. Les courriels ont été envoyés à la cliente et à Ange Muu.';
+        } else if (email && email.client === 'sent' && email.admin === 'failed') {
+            message.textContent = 'Réservation confirmée et courriel cliente envoyé, mais le courriel Ange Muu a échoué.';
+        } else if (email && email.client === 'failed' && email.admin === 'sent') {
+            message.textContent = 'Réservation confirmée et courriel Ange Muu envoyé. Vérifiez l’adresse ou la configuration du courriel cliente.';
+        } else if (email && email.client === 'skipped') {
+            message.textContent = email.admin === 'sent'
+                ? 'Réservation confirmée et courriel Ange Muu envoyé. Aucun courriel cliente : son adresse est absente.'
+                : 'Réservation confirmée, mais le courriel Ange Muu a échoué. Aucun courriel cliente : son adresse est absente.';
+        } else {
+            message.textContent = 'Réservation confirmée, mais l’envoi des courriels n’a pas abouti. Vérifiez la configuration Resend.';
+        }
     }
 
     await renderBookings();

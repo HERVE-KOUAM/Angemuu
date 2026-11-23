@@ -75,6 +75,14 @@
                         <option value="confirmed">Confirmées</option>
                         <option value="canceled">Annulées</option>
                     </select>
+                    <label class="form-label small mb-1" for="booking-sort">Trier par</label>
+                    <select class="form-select mb-3" id="booking-sort">
+                        <option value="date_asc">Date la plus proche</option>
+                        <option value="date_desc">Date la plus éloignée</option>
+                        <option value="created_desc">Demandes récentes</option>
+                        <option value="name_asc">Nom du client</option>
+                    </select>
+                    <p id="booking-action-message" class="small mb-3" role="status" aria-live="polite"></p>
                     <div id="booking-list"></div>
                 </div>
             </div>

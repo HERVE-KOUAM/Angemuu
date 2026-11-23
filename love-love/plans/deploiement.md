@@ -2,7 +2,7 @@
 
 Ce document décrit les étapes nécessaires pour activer le flux de réservation :
 1. Appliquer les migrations versionnées.
-2. Déployer la Edge Function `save-booking`.
+2. Déployer les Edge Functions qui gèrent la réservation et les actions Admin.
 3. S'abonner aux notifications push (optionnel).
 
 ---
@@ -39,10 +39,12 @@ supabase db push
 
 ---
 
-## 3. Déployer la Edge Function
+## 3. Déployer les Edge Functions
 
 ```bash
 supabase functions deploy save-booking --no-verify-jwt
+supabase functions deploy admin-actions --no-verify-jwt
+supabase functions deploy request-modification --no-verify-jwt
 ```
 
 - `--no-verify-jwt` : la fonction est appelable par le site public (client anon) et valide elle-même les données.
@@ -51,12 +53,17 @@ supabase functions deploy save-booking --no-verify-jwt
 
 ### Variable d'environnement
 
-Dans le dashboard Supabase → **Edge Functions** → `save-booking` → **Secrets** :
+Dans le dashboard Supabase → **Edge Functions** → **Secrets** (secrets du projet) :
 
 | Clé | Valeur | Défaut |
 |---|---|---|
 | `NTFY_TOPIC` | topic ntfy (ex. `angemuu-reservations`) | `angemuu-reservations` |
 | `SUPABASE_SERVICE_ROLE_KEY` | clé secrète de service du projet Supabase | fournie par Supabase ; obligatoire pour `create_booking_atomic` |
+| `RESEND_API_KEY` | clé API Resend | nécessaire aux courriels de demande et de confirmation |
+| `RESEND_FROM` | expéditeur validé chez Resend, ex. `Ange Muu <contact@angemuu.net>` | valeur par défaut : `Angemuu <contact@angemuu.net>` |
+| `ADMIN_EMAILS` | adresses de gestion séparées par des virgules | deux adresses Ange Muu sont prévues par défaut dans les fonctions |
+
+Après confirmation dans l’Admin, `admin-actions` envoie un courriel récapitulatif à la cliente (si son adresse est renseignée) et aux adresses Ange Muu. La réponse de l’Admin indique si les courriels ont été acceptés par Resend. Une défaillance d’email ne révoque pas la confirmation déjà enregistrée.
 
 ---
 

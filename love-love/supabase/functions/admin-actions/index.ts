@@ -18,6 +18,10 @@ import { z } from "https://esm.sh/zod@3.23.8";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
+const RESEND_FROM = Deno.env.get("RESEND_FROM") ?? "Angemuu <contact@angemuu.net>";
+const ADMIN_EMAILS = (Deno.env.get("ADMIN_EMAILS") ?? "murielleangemetiegamkengne@gmail.com,hkouamherve145@gmail.com")
+  .split(",").map((s) => s.trim()).filter(Boolean);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,7 +29,7 @@ const corsHeaders = {
 };
 
 const actionSchema = z.object({
-  action: z.enum(["confirm", "reject", "cancel", "accept_modification", "reject_modification"]),
+  action: z.enum(["confirm", "reject", "cancel", "resend_confirmation", "accept_modification", "reject_modification"]),
   id: z.union([z.string(), z.number()]),
 });
 
@@ -36,6 +40,56 @@ const BLOCK_HOURS = 6;
 function timeToMinutes(t: string): number {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + (m || 0);
+}
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? "").replace(/[&<>\"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;",
+  }[character]!));
+}
+
+function confirmationEmailHtml(booking: Record<string, unknown>, isAdmin = false): string {
+  const name = escapeHtml(booking.client_name);
+  const detailRows = [
+    ["Service", booking.service], ["Date", booking.date], ["Heure", booking.time], ["Lieu", booking.location],
+  ].map(([label, value]) => `<tr><td style="padding:10px 0;color:#756b68;border-bottom:1px solid #eee7e4">${label}</td><td style="padding:10px 0;text-align:right;color:#292321;border-bottom:1px solid #eee7e4;font-weight:600">${escapeHtml(value)}</td></tr>`).join("");
+  const title = isAdmin ? "Rendez-vous confirmé" : "Votre rendez-vous est confirmé";
+  const intro = isAdmin
+    ? `La réservation de <strong>${name}</strong> vient d’être confirmée.`
+    : `Bonjour ${name}, votre rendez-vous avec Ange Muu est confirmé. Nous avons hâte de vous accueillir.`;
+  return `<!doctype html><html><body style="margin:0;background:#f7f4f2;font-family:Arial,sans-serif;color:#292321"><div style="max-width:560px;margin:32px auto;padding:0 16px"><div style="background:#fff;border:1px solid #eee7e4;border-radius:16px;overflow:hidden"><div style="padding:28px 32px;background:#392923;color:#fff"><div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#e8c9b9">ANGE MUU</div><h1 style="font-size:23px;margin:12px 0 0">${title}</h1></div><div style="padding:28px 32px"><p style="line-height:1.6">${intro}</p><table style="width:100%;border-collapse:collapse;margin:22px 0">${detailRows}</table><p style="font-size:13px;line-height:1.6;color:#756b68">Pour toute question, contactez-nous directement. À bientôt,<br><strong style="color:#392923">L’équipe Ange Muu</strong></p></div></div><p style="text-align:center;color:#958985;font-size:11px;margin:16px 0">Ange Muu · Élégance &amp; modernité</p></div></body></html>`;
+}
+
+async function sendEmail(to: string[], subject: string, html: string): Promise<boolean> {
+  if (!RESEND_API_KEY || !to.length) return false;
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: RESEND_FROM, to, subject, html }),
+  });
+  if (!response.ok) console.error("Resend confirmation email failed:", response.status, await response.text());
+  return response.ok;
+}
+
+async function deliverConfirmationEmails(booking: Record<string, unknown>) {
+  let client: "sent" | "failed" | "skipped" = "skipped";
+  let admin: "sent" | "failed" | "skipped" = "skipped";
+  if (!RESEND_API_KEY) {
+    return { client: booking.email ? "failed" : "skipped", admin: ADMIN_EMAILS.length ? "failed" : "skipped" };
+  }
+  try {
+    client = booking.email
+      ? (await sendEmail([String(booking.email)], "Votre rendez-vous est confirmé — Ange Muu", confirmationEmailHtml(booking)) ? "sent" : "failed")
+      : "skipped";
+    admin = ADMIN_EMAILS.length
+      ? (await sendEmail(ADMIN_EMAILS, `Rendez-vous confirmé — ${String(booking.client_name ?? "Ange Muu")}`, confirmationEmailHtml(booking, true)) ? "sent" : "failed")
+      : "skipped";
+  } catch (emailError) {
+    console.error("Confirmation email error:", emailError);
+    if (client === "skipped" && booking.email) client = "failed";
+    if (admin === "skipped" && ADMIN_EMAILS.length) admin = "failed";
+  }
+  return { client, admin };
 }
 
 Deno.serve(async (req) => {
@@ -78,10 +132,49 @@ Deno.serve(async (req) => {
     // Opérations internes avec service_role (contourne les RLS)
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
+    if (parsed.data.action === "resend_confirmation") {
+      const { data: booking, error: bookingError } = await supabase.from("bookings")
+        .select("id, client_name, email, service, date, time, location, status")
+        .eq("id", id).maybeSingle();
+      if (bookingError || !booking) {
+        return new Response(JSON.stringify({ error: "booking_not_found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (booking.status !== "confirmed") {
+        return new Response(JSON.stringify({ error: "booking_not_confirmed" }), { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const email = await deliverConfirmationEmails(booking);
+      return new Response(JSON.stringify({ ok: true, status: "confirmed", email }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // 3. Actions directes sur la réservation
     if (parsed.data.action === "confirm" || parsed.data.action === "reject" || parsed.data.action === "cancel") {
       const statusMap: Record<string, string> = { confirm: "confirmed", reject: "rejected", cancel: "canceled" };
       const eventMap: Record<string, string> = { confirm: "booking.confirmed", reject: "booking.rejected", cancel: "booking.canceled" };
+
+      if (parsed.data.action === "confirm") {
+        const { data: booking, error: bookingError } = await supabase.from("bookings")
+          .select("id, client_name, email, service, date, time, location, status")
+          .eq("id", id).maybeSingle();
+        if (bookingError || !booking) {
+          return new Response(JSON.stringify({ error: "booking_not_found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        if (booking.status !== "pending") {
+          return new Response(JSON.stringify({ ok: true, status: booking.status, already_processed: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const { data: confirmed, error: confirmError } = await supabase.from("bookings")
+          .update({ status: "confirmed" }).eq("id", id).eq("status", "pending")
+          .select("id, client_name, email, service, date, time, location").maybeSingle();
+        if (confirmError || !confirmed) {
+          return new Response(JSON.stringify({ error: "confirmation_conflict" }), { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const { error: outboxError } = await supabase.from("outbox_events").insert({
+          event_type: eventMap.confirm, payload: { booking_id: id }, status: "pending",
+        });
+        if (outboxError) console.error("Could not record confirmation event:", outboxError.message);
+
+        const email = await deliverConfirmationEmails(confirmed);
+        return new Response(JSON.stringify({ ok: true, status: "confirmed", email }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
 
       const { error } = await supabase
         .from("bookings")
