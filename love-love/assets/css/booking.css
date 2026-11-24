@@ -111,6 +111,201 @@
     padding: 12px 28px;
 }
 
+.booking-wizard {
+    margin: 0 0 30px;
+}
+
+.booking-wizard-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    color: #6d514a;
+    font-size: .82rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.booking-wizard-heading span:first-child {
+    color: #9a7466;
+}
+
+.booking-progress-track {
+    height: 4px;
+    margin: 11px 0 18px;
+    overflow: hidden;
+    border-radius: 99px;
+    background: #eadfd9;
+}
+
+.booking-progress-track span {
+    display: block;
+    width: 33.333%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #986a57, #c39378);
+    transition: width .35s ease;
+}
+
+.booking-step-indicators {
+    display: flex;
+    justify-content: space-between;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.booking-step-indicators li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #a0938d;
+    font-size: .8rem;
+}
+
+.booking-step-indicators li span {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border: 1px solid #ddd0ca;
+    border-radius: 50%;
+    background: #fff;
+    font-size: .7rem;
+    font-weight: 700;
+}
+
+.booking-step-indicators li.is-current,
+.booking-step-indicators li.is-complete {
+    color: #604235;
+}
+
+.booking-step-indicators li.is-current span,
+.booking-step-indicators li.is-complete span {
+    border-color: #986a57;
+    background: #986a57;
+    color: #fff;
+}
+
+.booking-form-step[hidden] {
+    display: none;
+}
+
+.booking-form-step.is-active {
+    animation: booking-step-in .28s ease both;
+}
+
+.booking-form-step h3 {
+    margin: 0 0 24px;
+    color: #43332e;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(1.45rem, 3vw, 1.9rem);
+}
+
+.booking-step-kicker {
+    margin: 0 0 8px;
+    color: #986a57;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.booking-optional {
+    margin-left: 5px;
+    color: #8d7b73;
+    font-size: .78rem;
+    font-weight: 400;
+}
+
+.booking-step-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.booking-step-back,
+.booking-step-next {
+    min-height: 48px;
+    padding: 11px 20px;
+    border: 1px solid #d9c7bd;
+    border-radius: 999px;
+    background: #fff;
+    color: #604235;
+    font-weight: 700;
+    transition: background .2s ease, transform .2s ease;
+}
+
+.booking-step-next {
+    margin-left: auto;
+    border-color: #604235;
+    background: #604235;
+    color: #fff;
+}
+
+.booking-step-back:hover,
+.booking-step-back:focus-visible {
+    background: #f4ebe6;
+}
+
+.booking-step-next:hover,
+.booking-step-next:focus-visible {
+    transform: translateY(-1px);
+    background: #493229;
+    color: #fff;
+}
+
+.booking-step-actions button:focus-visible {
+    outline: 3px solid #c39378;
+    outline-offset: 3px;
+}
+
+.booking-submit {
+    margin-left: auto;
+}
+
+.booking-review {
+    display: grid;
+    gap: 5px;
+    margin-top: 22px;
+    padding: 16px 18px;
+    border: 1px solid #eadbd3;
+    border-radius: 14px;
+    background: linear-gradient(120deg, #fff, #f7eee9);
+}
+
+.booking-review-label {
+    color: #986a57;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.booking-review strong {
+    color: #43332e;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.1rem;
+}
+
+.booking-review span:last-child {
+    color: #6d5a52;
+    font-size: .9rem;
+}
+
+.booking-step-error {
+    margin: 18px 0 0;
+    color: #9a453d;
+    font-weight: 600;
+}
+
+@keyframes booking-step-in {
+    from { opacity: 0; transform: translateY(7px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 .booking-feedback[hidden] {
     display: none;
 }
@@ -217,6 +412,24 @@
 }
 
 @media (max-width: 575.98px) {
+    .booking-shell {
+        padding: 20px 17px;
+    }
+
+    .booking-step-indicators li {
+        gap: 5px;
+        font-size: .7rem;
+    }
+
+    .booking-step-indicators li span {
+        width: 26px;
+        height: 26px;
+    }
+
+    .booking-step-actions button {
+        padding: 10px 15px;
+    }
+
     .booking-feedback {
         padding: 1.2rem 1rem 1.25rem 3.6rem;
     }

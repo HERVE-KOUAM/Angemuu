@@ -446,6 +446,7 @@ async function renderBookings() {
                 <p class="mb-1"><strong>Téléphone :</strong> ${escapeHtml(booking.phone || '')}</p>
                 <p class="mb-1"><strong>Email :</strong> ${escapeHtml(booking.email || '')}</p>
                 <p class="mb-1"><strong>Service :</strong> ${escapeHtml(booking.service || '')}</p>
+                ${booking.comment ? `<p class="mb-1"><strong>Précisions / inspiration :</strong> ${escapeHtml(booking.comment)}</p>` : ''}
                 <p class="mb-1"><strong>Lieu :</strong> ${escapeHtml(booking.location || '')}</p>
                 <p class="mb-2"><strong>Statut :</strong> ${escapeHtml(booking.status || 'pending')}</p>
 

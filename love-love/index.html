@@ -80,7 +80,7 @@
     <link href="assets/css/odometer-theme-default.css" rel="stylesheet">
     <link href="assets/css/jquery-ui.css" rel="stylesheet">
     <link href="assets/sass/style.css" rel="stylesheet">
-    <link href="assets/css/booking.css?v=4" rel="stylesheet">
+    <link href="assets/css/booking.css?v=5" rel="stylesheet">
     <link href="assets/css/booking-calendar.css?v=2" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -306,59 +306,100 @@
                                     </div>
                                     <div class="booking-shell">
                                         <form id="booking-form" class="contact-validation-active">
-                                            <div class="mb-3">
-                                                <label class="form-label">Nom et prénom</label>
-                                                <input type="text" class="form-control" name="clientName" required>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Téléphone</label>
-                                                <div class="input-group">
-                                                    <select class="form-select" name="phonePrefix" style="max-width: 150px;" required>
-                                                        <option value="+237" selected>Cameroun (+237)</option>
-                                                        <option value="+33">France (+33)</option>
-                                                        <option value="+1">USA/Canada (+1)</option>
-                                                        <option value="+241">Gabon (+241)</option>
-                                                        <option value="+225">Côte d'Ivoire (+225)</option>
-                                                        <option value="+221">Sénégal (+221)</option>
-                                                        <option value="+242">Congo (+242)</option>
-                                                        <option value="+32">Belgique (+32)</option>
-                                                        <option value="+41">Suisse (+41)</option>
-                                                        <option value="+49">Allemagne (+49)</option>
-                                                    </select>
-                                                    <input type="text" class="form-control" name="phoneNumber" placeholder="6XXXXXXXX" required>
+                                            <div class="booking-wizard" aria-label="Étapes de réservation">
+                                                <div class="booking-wizard-heading">
+                                                    <span id="booking-step-count">Étape 1 sur 3</span>
+                                                    <span id="booking-step-name">Votre coiffure</span>
                                                 </div>
+                                                <div class="booking-progress-track" aria-hidden="true"><span id="booking-progress-fill"></span></div>
+                                                <ol class="booking-step-indicators" aria-label="Progression">
+                                                    <li class="is-current" data-step-indicator="0"><span>01</span><small>Style</small></li>
+                                                    <li data-step-indicator="1"><span>02</span><small>Rendez-vous</small></li>
+                                                    <li data-step-indicator="2"><span>03</span><small>Vos détails</small></li>
+                                                </ol>
                                             </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Date</label>
-                                                <input type="hidden" id="booking-date-input" name="date">
-                                                <div id="booking-date-picker" class="sc-calendar-shell"></div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Heure</label>
-                                                <input type="hidden" id="booking-time-input" name="time">
-                                                <div id="booking-slots" class="sc-slots-shell"></div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Email</label>
-                                                <input type="email" class="form-control" name="email" placeholder="email@exemple.com">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Service</label>
-                                                <input type="text" class="form-control" name="service" placeholder="Coiffure, brushing, etc." required>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Commentaire (optionnel)</label>
-                                                <textarea class="form-control" name="comment" placeholder="Ajoutez un détail sur votre coiffure ou votre demande..."></textarea>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Lieu</label>
-                                                <select class="form-select" name="location" required>
-                                                    <option value="Chez Ange Muu">Chez Ange Muu</option>
-                                                    <option value="À domicile">À domicile</option>
-                                                </select>
-                                            </div>
-                                            <div class="submit-area">
-                                                <button type="submit" class="theme-btn">Prendre RDV</button>
+
+                                            <section class="booking-form-step is-active" data-booking-step="0" aria-labelledby="booking-step-title-0">
+                                                <p class="booking-step-kicker">Commençons par l’essentiel</p>
+                                                <h3 id="booking-step-title-0" tabindex="-1">Quelle coiffure souhaitez-vous ?</h3>
+                                                <div class="mb-3">
+                                                    <label class="form-label" for="booking-service">Service ou coiffure</label>
+                                                    <input id="booking-service" type="text" class="form-control" name="service" placeholder="Ex. knotless braids, cornrows…" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label" for="booking-inspiration">Lien d’inspiration <span class="booking-optional">facultatif</span></label>
+                                                    <input id="booking-inspiration" type="url" class="form-control" name="inspirationUrl" placeholder="https://…">
+                                                    <div class="form-text">Collez un lien vers la coiffure qui vous inspire. Vous pourrez aussi nous envoyer une photo sur WhatsApp après la demande.</div>
+                                                </div>
+                                            </section>
+
+                                            <section class="booking-form-step" data-booking-step="1" aria-labelledby="booking-step-title-1" hidden>
+                                                <p class="booking-step-kicker">Choisissez votre moment</p>
+                                                <h3 id="booking-step-title-1" tabindex="-1">Quand souhaitez-vous venir ?</h3>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Date</label>
+                                                    <input type="hidden" id="booking-date-input" name="date">
+                                                    <div id="booking-date-picker" class="sc-calendar-shell"></div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">Heure</label>
+                                                    <input type="hidden" id="booking-time-input" name="time">
+                                                    <div id="booking-slots" class="sc-slots-shell"></div>
+                                                </div>
+                                            </section>
+
+                                            <section class="booking-form-step" data-booking-step="2" aria-labelledby="booking-step-title-2" hidden>
+                                                <p class="booking-step-kicker">Presque terminé</p>
+                                                <h3 id="booking-step-title-2" tabindex="-1">Comment vous joindre ?</h3>
+                                                <div class="mb-3">
+                                                    <label class="form-label" for="booking-client-name">Nom et prénom</label>
+                                                    <input id="booking-client-name" type="text" class="form-control" name="clientName" autocomplete="name" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label" for="booking-phone">Téléphone</label>
+                                                    <div class="input-group">
+                                                        <select class="form-select" name="phonePrefix" aria-label="Indicatif téléphonique" style="max-width: 150px;" required>
+                                                            <option value="+237" selected>Cameroun (+237)</option>
+                                                            <option value="+33">France (+33)</option>
+                                                            <option value="+1">USA/Canada (+1)</option>
+                                                            <option value="+241">Gabon (+241)</option>
+                                                            <option value="+225">Côte d'Ivoire (+225)</option>
+                                                            <option value="+221">Sénégal (+221)</option>
+                                                            <option value="+242">Congo (+242)</option>
+                                                            <option value="+32">Belgique (+32)</option>
+                                                            <option value="+41">Suisse (+41)</option>
+                                                            <option value="+49">Allemagne (+49)</option>
+                                                        </select>
+                                                        <input id="booking-phone" type="tel" class="form-control" name="phoneNumber" placeholder="6XXXXXXXX" autocomplete="tel-national" required>
+                                                    </div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label" for="booking-email">Email <span class="booking-optional">facultatif</span></label>
+                                                    <input id="booking-email" type="email" class="form-control" name="email" placeholder="email@exemple.com" autocomplete="email">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label" for="booking-location">Lieu du rendez-vous</label>
+                                                    <select id="booking-location" class="form-select" name="location" required>
+                                                        <option value="Chez Ange Muu">Chez Ange Muu</option>
+                                                        <option value="À domicile">À domicile</option>
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label" for="booking-comment">Précision <span class="booking-optional">facultatif</span></label>
+                                                    <textarea id="booking-comment" class="form-control" name="comment" placeholder="Un détail utile pour préparer votre rendez-vous ?"></textarea>
+                                                </div>
+                                                <aside class="booking-review" aria-live="polite">
+                                                    <span class="booking-review-label">Votre récapitulatif</span>
+                                                    <strong id="booking-review-service">Votre coiffure</strong>
+                                                    <span id="booking-review-slot">Choisissez une date et une heure</span>
+                                                </aside>
+                                            </section>
+
+                                            <p id="booking-step-error" class="booking-step-error" role="alert" hidden></p>
+                                            <div class="booking-step-actions">
+                                                <button type="button" class="booking-step-back" id="booking-step-back" hidden>← Retour</button>
+                                                <button type="button" class="booking-step-next" id="booking-step-next">Continuer <span aria-hidden="true">→</span></button>
+                                                <button type="submit" class="theme-btn booking-submit" id="booking-submit" hidden>Envoyer ma demande</button>
                                             </div>
                                         </form>
                                         <section id="booking-feedback" class="booking-feedback" role="status" aria-live="polite" tabindex="-1" hidden>
@@ -551,7 +592,7 @@
     <script src="assets/js/booking-logic.js"></script>
     <script src="assets/js/booking-calendar.js?v=2"></script>
     <script src="assets/js/booking-slots.js?v=2"></script>
-    <script src="assets/js/booking-submit.js?v=2"></script>
+    <script src="assets/js/booking-submit.js?v=3"></script>
 </body>
 
 
