@@ -80,7 +80,7 @@
     <link href="assets/css/odometer-theme-default.css" rel="stylesheet">
     <link href="assets/css/jquery-ui.css" rel="stylesheet">
     <link href="assets/sass/style.css" rel="stylesheet">
-    <link href="assets/css/booking.css?v=5" rel="stylesheet">
+    <link href="assets/css/booking.css?v=6" rel="stylesheet">
     <link href="assets/css/booking-calendar.css?v=2" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -305,17 +305,19 @@
                                         <h4>Prendre rendez-vous</h4>
                                     </div>
                                     <div class="booking-shell">
-                                        <form id="booking-form" class="contact-validation-active">
+                                        <form id="booking-form" class="contact-validation-active" novalidate>
                                             <div class="booking-wizard" aria-label="Étapes de réservation">
                                                 <div class="booking-wizard-heading">
-                                                    <span id="booking-step-count">Étape 1 sur 3</span>
+                                                    <span id="booking-step-count">Étape 1 sur 5</span>
                                                     <span id="booking-step-name">Votre coiffure</span>
                                                 </div>
                                                 <div class="booking-progress-track" aria-hidden="true"><span id="booking-progress-fill"></span></div>
                                                 <ol class="booking-step-indicators" aria-label="Progression">
                                                     <li class="is-current" data-step-indicator="0"><span>01</span><small>Style</small></li>
                                                     <li data-step-indicator="1"><span>02</span><small>Rendez-vous</small></li>
-                                                    <li data-step-indicator="2"><span>03</span><small>Vos détails</small></li>
+                                                    <li data-step-indicator="2"><span>03</span><small>Contact</small></li>
+                                                    <li data-step-indicator="3"><span>04</span><small>Acompte</small></li>
+                                                    <li data-step-indicator="4"><span>05</span><small>Confirmer</small></li>
                                                 </ol>
                                             </div>
 
@@ -374,8 +376,9 @@
                                                     </div>
                                                 </div>
                                                 <div class="mb-3">
-                                                    <label class="form-label" for="booking-email">Email <span class="booking-optional">facultatif</span></label>
-                                                    <input id="booking-email" type="email" class="form-control" name="email" placeholder="email@exemple.com" autocomplete="email">
+                                                    <label class="form-label" for="booking-email">Email</label>
+                                                    <input id="booking-email" type="email" class="form-control" name="email" placeholder="email@exemple.com" autocomplete="email" required aria-describedby="booking-email-help">
+                                                    <div id="booking-email-help" class="form-text">Nous utiliserons cette adresse pour vous envoyer le rappel de l’acompte.</div>
                                                 </div>
                                                 <div class="mb-3">
                                                     <label class="form-label" for="booking-location">Lieu du rendez-vous</label>
@@ -388,11 +391,31 @@
                                                     <label class="form-label" for="booking-comment">Précision <span class="booking-optional">facultatif</span></label>
                                                     <textarea id="booking-comment" class="form-control" name="comment" placeholder="Un détail utile pour préparer votre rendez-vous ?"></textarea>
                                                 </div>
+                                            </section>
+
+                                            <section class="booking-form-step" data-booking-step="3" aria-labelledby="booking-step-title-3" hidden>
+                                                <p class="booking-step-kicker">Dernière étape avant l’envoi</p>
+                                                <h3 id="booking-step-title-3" tabindex="-1">Un acompte est nécessaire</h3>
+                                                <div class="booking-deposit-card">
+                                                    <span class="booking-deposit-icon" aria-hidden="true">✦</span>
+                                                    <p>Pour réserver votre place, l’acompte doit être effectué auprès d’Ange Muu sur WhatsApp. Continuez pour obtenir les modalités de paiement.</p>
+                                                </div>
+                                                <label class="booking-deposit-consent" for="booking-deposit-ack">
+                                                    <input id="booking-deposit-ack" type="checkbox" name="depositAcknowledged" value="true" required>
+                                                    <span>J’ai compris qu’un acompte est nécessaire pour réserver ma place.</span>
+                                                </label>
+                                            </section>
+
+                                            <section class="booking-form-step" data-booking-step="4" aria-labelledby="booking-step-title-4" hidden>
+                                                <p class="booking-step-kicker">Vérifiez avant d’envoyer</p>
+                                                <h3 id="booking-step-title-4" tabindex="-1">Votre demande de rendez-vous</h3>
                                                 <aside class="booking-review" aria-live="polite">
                                                     <span class="booking-review-label">Votre récapitulatif</span>
                                                     <strong id="booking-review-service">Votre coiffure</strong>
                                                     <span id="booking-review-slot">Choisissez une date et une heure</span>
+                                                    <span id="booking-review-contact"></span>
                                                 </aside>
+                                                <p class="booking-submit-note">Votre demande sera envoyée à Ange Muu. Votre place sera réservée après échange au sujet de l’acompte sur WhatsApp.</p>
                                             </section>
 
                                             <p id="booking-step-error" class="booking-step-error" role="alert" hidden></p>
@@ -592,7 +615,7 @@
     <script src="assets/js/booking-logic.js"></script>
     <script src="assets/js/booking-calendar.js?v=2"></script>
     <script src="assets/js/booking-slots.js?v=2"></script>
-    <script src="assets/js/booking-submit.js?v=3"></script>
+    <script src="assets/js/booking-submit.js?v=4"></script>
 </body>
 
 

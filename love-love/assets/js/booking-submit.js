@@ -13,7 +13,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const stepCount = document.getElementById('booking-step-count');
     const stepName = document.getElementById('booking-step-name');
     const progressFill = document.getElementById('booking-progress-fill');
-    const stepNames = ['Votre coiffure', 'Votre rendez-vous', 'Vos détails'];
+    const depositAcknowledgement = document.getElementById('booking-deposit-ack');
+    const depositWhatsapp = document.getElementById('booking-deposit-whatsapp');
+    const stepNames = ['Votre coiffure', 'Votre rendez-vous', 'Vos coordonnées', 'Acompte', 'Confirmation'];
     let currentStep = 0;
     let isSubmitting = false;
 
@@ -27,10 +29,21 @@ document.addEventListener('DOMContentLoaded', function() {
         const time = bookingForm?.elements.time?.value;
         const reviewService = document.getElementById('booking-review-service');
         const reviewSlot = document.getElementById('booking-review-slot');
+        const reviewContact = document.getElementById('booking-review-contact');
         if (reviewService) reviewService.textContent = service;
         if (reviewSlot) reviewSlot.textContent = date && time
             ? `${formatDate(date)} · ${time}`
             : 'Choisissez une date et une heure';
+        if (reviewContact) reviewContact.textContent = [bookingForm?.elements.clientName?.value.trim(), bookingForm?.elements.email?.value.trim()].filter(Boolean).join(' · ');
+        if (depositWhatsapp) {
+            const message = [
+                'Bonjour Ange Muu, je souhaite effectuer l’acompte pour réserver mon rendez-vous.',
+                `Coiffure : ${service}`,
+                date && time ? `Date : ${formatDate(date)} à ${time}` : '',
+                `Nom : ${bookingForm?.elements.clientName?.value.trim() || ''}`
+            ].filter(Boolean).join('\n');
+            depositWhatsapp.href = `https://wa.me/237656142787?text=${encodeURIComponent(message)}`;
+        }
     }
 
     function showStep(index, moveFocus = true) {
@@ -51,12 +64,16 @@ document.addEventListener('DOMContentLoaded', function() {
         if (progressFill) progressFill.style.width = `${((currentStep + 1) / steps.length) * 100}%`;
         if (stepBack) stepBack.hidden = currentStep === 0;
         if (stepNext) stepNext.hidden = currentStep === steps.length - 1;
+        if (stepNext) {
+            stepNext.disabled = currentStep === 3 && !depositAcknowledgement?.checked;
+            stepNext.innerHTML = currentStep === 3 ? 'Continuer vers le récapitulatif <span aria-hidden="true">→</span>' : 'Continuer <span aria-hidden="true">→</span>';
+        }
         if (submitButton) submitButton.hidden = currentStep !== steps.length - 1;
         if (stepError) {
             stepError.hidden = true;
             stepError.textContent = '';
         }
-        if (currentStep === steps.length - 1) refreshBookingReview();
+        if (currentStep === 3 || currentStep === steps.length - 1) refreshBookingReview();
         if (moveFocus) document.getElementById(`booking-step-title-${currentStep}`)?.focus({ preventScroll: true });
     }
 
@@ -81,11 +98,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
         }
+        if (currentStep === 2) {
+            const contactFields = steps[currentStep].querySelectorAll('input, select, textarea');
+            for (const field of contactFields) {
+                if (!field.checkValidity()) {
+                    field.reportValidity();
+                    return;
+                }
+            }
+        }
+        if (currentStep === 3 && !depositAcknowledgement?.checked) {
+            showStepError('Veuillez confirmer que vous avez compris les modalités de l’acompte.');
+            return;
+        }
         if (currentStep < steps.length - 1) showStep(currentStep + 1);
     });
 
     stepBack?.addEventListener('click', function() {
         if (currentStep > 0) showStep(currentStep - 1);
+    });
+
+    depositAcknowledgement?.addEventListener('change', function() {
+        if (stepNext && currentStep === 3) stepNext.disabled = !this.checked;
+        if (stepError) stepError.hidden = true;
     });
 
     bookingForm?.addEventListener('input', refreshBookingReview);
@@ -165,6 +200,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     bookingForm.addEventListener('submit', async function(event) {
         event.preventDefault();
+        if (currentStep !== steps.length - 1) {
+            if (stepNext?.disabled) {
+                showStepError('Veuillez confirmer que vous avez compris les modalités de l’acompte.');
+            } else {
+                stepNext?.click();
+            }
+            return;
+        }
         if (isSubmitting) return;
 
         const formData = new FormData(bookingForm);
@@ -173,15 +216,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const phone = `${fields.phonePrefix || ''} ${fields.phoneNumber || ''}`.trim();
         const date = String(fields.date || '');
         const time = String(fields.time || '');
-        const email = String(fields.email || '').trim() || null;
+        const email = String(fields.email || '').trim();
         const service = String(fields.service || '').trim();
         const location = String(fields.location || 'Chez Ange Muu');
         const inspirationUrl = String(fields.inspirationUrl || '').trim();
         const clientComment = String(fields.comment || '').trim();
         const comment = [clientComment, inspirationUrl ? `Lien d’inspiration : ${inspirationUrl}` : ''].filter(Boolean).join('\n');
 
-        if (!clientName || !fields.phoneNumber || !date || !time || !service) {
-            showFeedback('error', 'Il manque une information', 'Renseignez votre nom, votre téléphone, un créneau et le service souhaité.', 'Bonjour Ange Muu, pouvez-vous m’aider à prendre rendez-vous ?', false);
+        if (!clientName || !fields.phoneNumber || !email || !date || !time || !service || !depositAcknowledgement?.checked) {
+            showFeedback('error', 'Il manque une information', 'Vérifiez votre nom, votre téléphone, votre email, le créneau et votre accord pour l’acompte.', 'Bonjour Ange Muu, pouvez-vous m’aider à prendre rendez-vous ?', false);
             feedback?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }
@@ -220,7 +263,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     time,
                     service,
                     location,
-                    comment
+                    comment,
+                    deposit_acknowledged: depositAcknowledgement.checked
                 }
             });
             responseData = response.data;
@@ -267,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
         bookingForm.removeAttribute('aria-busy');
         if (submitButton) {
             submitButton.disabled = false;
-            submitButton.textContent = 'Prendre RDV';
+            submitButton.textContent = 'Envoyer ma demande';
         }
     });
 });

@@ -45,6 +45,8 @@
 - Permettre l’aperçu et le retrait d’une photo avant envoi ; limiter formats et taille.
 - Enregistrer l’image dans Supabase Storage avec accès contrôlé. Garder le lien comme option sans téléverser l’image.
 - Après enregistrement, montrer le statut « demande envoyée / en attente », le récapitulatif et le bouton « Continuer sur WhatsApp ».
+- Exiger une adresse email valide et présenter l’étape d’acompte avant l’envoi final : expliquer que la cliente doit contacter Ange Muu sur WhatsApp, recueillir son accord explicite, puis permettre de continuer.
+- Planifier un rappel email stylisé cinq minutes après chaque réservation, avec un bouton WhatsApp prérempli. Utiliser Supabase Cron, une file durable et des tentatives idempotentes; envoyer aussi si le rendez-vous est à moins d’une semaine, selon la décision de la cliente.
 
 **Résultat attendu :** un formulaire court, guidé et rassurant, adapté aux clientes qui ne savent pas quoi écrire dans WhatsApp.
 

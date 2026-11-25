@@ -35,7 +35,7 @@ const corsHeaders = {
 const bookingSchema = z.object({
   client_name: z.string().trim().min(2, "Nom trop court").max(120, "Nom trop long"),
   phone: z.string().trim().min(6, "Téléphone invalide").max(30, "Téléphone trop long"),
-  email: z.string().trim().email("Email invalide").optional().nullable(),
+  email: z.string().trim().email("Email invalide").max(254, "Email trop long"),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide").refine((value) => {
     const parsedDate = new Date(`${value}T00:00:00.000Z`);
     return Number.isFinite(parsedDate.getTime()) && parsedDate.toISOString().slice(0, 10) === value;
@@ -44,6 +44,7 @@ const bookingSchema = z.object({
   service: z.string().trim().min(2, "Service requis").max(200, "Service trop long"),
   location: z.string().trim().min(2, "Lieu requis").max(100, "Lieu trop long"),
   comment: z.string().trim().max(1000, "Commentaire trop long").optional().nullable(),
+  deposit_acknowledged: z.literal(true),
 });
 
 function escapeHtml(value: string | null | undefined): string {
@@ -89,7 +90,7 @@ Deno.serve(async (req) => {
     const { data: reservationResult, error } = await supabase.rpc("create_booking_atomic", {
       p_client_name: parsed.data.client_name,
       p_phone: parsed.data.phone,
-      p_email: parsed.data.email ?? null,
+      p_email: parsed.data.email,
       p_date: parsed.data.date,
       p_time: parsed.data.time,
       p_service: parsed.data.service,

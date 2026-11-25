@@ -390,6 +390,16 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
+# Supabase's JWT gateway check is disabled for this cron-invoked function;
+# the handler enforces the private CRON_SECRET header itself.
+[functions.send-deposit-reminders]
+verify_jwt = false
+
+# Invitation links are signed with the server-only service key and expire after
+# the booking date; the handler validates the signature before reading a booking.
+[functions.download-calendar-invite]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

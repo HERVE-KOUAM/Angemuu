@@ -14,6 +14,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "https://esm.sh/zod@3.23.8";
+import { createCalendarInvite, icsAsBase64, signCalendarToken } from "../_shared/calendar-invite.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -48,7 +49,19 @@ function escapeHtml(value: unknown): string {
   }[character]!));
 }
 
-function confirmationEmailHtml(booking: Record<string, unknown>, isAdmin = false): string {
+async function calendarDownloadUrl(booking: Record<string, unknown>): Promise<string> {
+  const { utcStart } = createCalendarInvite(booking);
+  const expiresAt = Math.floor((utcStart.getTime() + 7 * 24 * 60 * 60 * 1000) / 1000);
+  const bookingId = String(booking.id);
+  const signature = await signCalendarToken(bookingId, expiresAt, SUPABASE_SERVICE_KEY);
+  const url = new URL("/functions/v1/download-calendar-invite", SUPABASE_URL);
+  url.searchParams.set("booking_id", bookingId);
+  url.searchParams.set("expires_at", String(expiresAt));
+  url.searchParams.set("signature", signature);
+  return url.toString();
+}
+
+function confirmationEmailHtml(booking: Record<string, unknown>, isAdmin = false, calendarUrl = ""): string {
   const name = escapeHtml(booking.client_name);
   const detailRows = [
     ["Service", booking.service], ["Date", booking.date], ["Heure", booking.time], ["Lieu", booking.location],
@@ -57,15 +70,18 @@ function confirmationEmailHtml(booking: Record<string, unknown>, isAdmin = false
   const intro = isAdmin
     ? `La réservation de <strong>${name}</strong> vient d’être confirmée.`
     : `Bonjour ${name}, votre rendez-vous avec Ange Muu est confirmé. Nous avons hâte de vous accueillir.`;
-  return `<!doctype html><html><body style="margin:0;background:#f7f4f2;font-family:Arial,sans-serif;color:#292321"><div style="max-width:560px;margin:32px auto;padding:0 16px"><div style="background:#fff;border:1px solid #eee7e4;border-radius:16px;overflow:hidden"><div style="padding:28px 32px;background:#392923;color:#fff"><div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#e8c9b9">ANGE MUU</div><h1 style="font-size:23px;margin:12px 0 0">${title}</h1></div><div style="padding:28px 32px"><p style="line-height:1.6">${intro}</p><table style="width:100%;border-collapse:collapse;margin:22px 0">${detailRows}</table><p style="font-size:13px;line-height:1.6;color:#756b68">Pour toute question, contactez-nous directement. À bientôt,<br><strong style="color:#392923">L’équipe Ange Muu</strong></p></div></div><p style="text-align:center;color:#958985;font-size:11px;margin:16px 0">Ange Muu · Élégance &amp; modernité</p></div></body></html>`;
+  const calendarButton = !isAdmin && calendarUrl
+    ? `<div style="margin:24px 0 8px"><a href="${escapeHtml(calendarUrl)}" style="display:inline-block;padding:14px 22px;border-radius:999px;background:#8a624e;color:#fff;font-weight:700;text-decoration:none">Ajouter à mon calendrier</a></div><p style="font-size:12px;line-height:1.5;color:#756b68">Le fichier calendrier inclut un rappel prévu 24 heures avant le rendez-vous.</p>`
+    : "";
+  return `<!doctype html><html><body style="margin:0;background:#f7f4f2;font-family:Arial,sans-serif;color:#292321"><div style="max-width:560px;margin:32px auto;padding:0 16px"><div style="background:#fff;border:1px solid #eee7e4;border-radius:16px;overflow:hidden"><div style="padding:28px 32px;background:#392923;color:#fff"><div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#e8c9b9">ANGE MUU</div><h1 style="font-size:23px;margin:12px 0 0">${title}</h1></div><div style="padding:28px 32px"><p style="line-height:1.6">${intro}</p><table style="width:100%;border-collapse:collapse;margin:22px 0">${detailRows}</table>${calendarButton}<p style="font-size:13px;line-height:1.6;color:#756b68">Pour toute question, contactez-nous directement. À bientôt,<br><strong style="color:#392923">L’équipe Ange Muu</strong></p></div></div><p style="text-align:center;color:#958985;font-size:11px;margin:16px 0">Ange Muu · Élégance &amp; modernité</p></div></body></html>`;
 }
 
-async function sendEmail(to: string[], subject: string, html: string): Promise<boolean> {
+async function sendEmail(to: string[], subject: string, html: string, attachments: Record<string, string>[] = []): Promise<boolean> {
   if (!RESEND_API_KEY || !to.length) return false;
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: RESEND_FROM, to, subject, html }),
+    body: JSON.stringify({ from: RESEND_FROM, to, subject, html, ...(attachments.length ? { attachments } : {}) }),
   });
   if (!response.ok) console.error("Resend confirmation email failed:", response.status, await response.text());
   return response.ok;
@@ -78,8 +94,15 @@ async function deliverConfirmationEmails(booking: Record<string, unknown>) {
     return { client: booking.email ? "failed" : "skipped", admin: ADMIN_EMAILS.length ? "failed" : "skipped" };
   }
   try {
+    const calendar = createCalendarInvite(booking);
+    const calendarUrl = booking.email ? await calendarDownloadUrl(booking) : "";
     client = booking.email
-      ? (await sendEmail([String(booking.email)], "Votre rendez-vous est confirmé — Ange Muu", confirmationEmailHtml(booking)) ? "sent" : "failed")
+      ? (await sendEmail(
+        [String(booking.email)],
+        "Votre rendez-vous est confirmé — Ange Muu",
+        confirmationEmailHtml(booking, false, calendarUrl),
+        [{ filename: "rendez-vous-ange-muu.ics", content: icsAsBase64(calendar.ics), content_type: "text/calendar; method=PUBLISH; charset=UTF-8" }],
+      ) ? "sent" : "failed")
       : "skipped";
     admin = ADMIN_EMAILS.length
       ? (await sendEmail(ADMIN_EMAILS, `Rendez-vous confirmé — ${String(booking.client_name ?? "Ange Muu")}`, confirmationEmailHtml(booking, true)) ? "sent" : "failed")

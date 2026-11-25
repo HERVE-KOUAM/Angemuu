@@ -159,6 +159,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
     color: #a0938d;
     font-size: .8rem;
 }
@@ -262,6 +263,12 @@
     outline-offset: 3px;
 }
 
+.booking-step-actions button:disabled {
+    cursor: not-allowed;
+    opacity: .48;
+    transform: none;
+}
+
 .booking-submit {
     margin-left: auto;
 }
@@ -293,6 +300,81 @@
 .booking-review span:last-child {
     color: #6d5a52;
     font-size: .9rem;
+}
+
+.booking-deposit-card {
+    margin: 20px 0;
+    padding: 23px;
+    border: 1px solid #eadbd3;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #fff 0%, #f7eee9 100%);
+}
+
+.booking-deposit-icon {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    margin-bottom: 14px;
+    place-items: center;
+    border-radius: 50%;
+    background: #efe2da;
+    color: #805c49;
+    font-size: 1.2rem;
+}
+
+.booking-deposit-card p {
+    margin: 0 0 17px;
+    color: #59483f;
+    line-height: 1.65;
+}
+
+.booking-deposit-whatsapp {
+    display: inline-flex;
+    min-height: 46px;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    padding: 11px 18px;
+    border-radius: 999px;
+    background: #276b4b;
+    color: #fff !important;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background .2s ease, transform .2s ease;
+}
+
+.booking-deposit-whatsapp:hover,
+.booking-deposit-whatsapp:focus-visible {
+    transform: translateY(-1px);
+    background: #1d573c;
+}
+
+.booking-deposit-consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 15px 16px;
+    border: 1px solid #e7d9d1;
+    border-radius: 12px;
+    background: #fff;
+    color: #4d3d35;
+    cursor: pointer;
+    line-height: 1.5;
+}
+
+.booking-deposit-consent input {
+    width: 19px;
+    height: 19px;
+    flex: 0 0 19px;
+    margin-top: 1px;
+    accent-color: #604235;
+}
+
+.booking-submit-note {
+    margin: 17px 0 0;
+    color: #6d5a52;
+    font-size: .9rem;
+    line-height: 1.6;
 }
 
 .booking-step-error {
@@ -417,8 +499,14 @@
     }
 
     .booking-step-indicators li {
-        gap: 5px;
-        font-size: .7rem;
+        flex-direction: column;
+        gap: 4px;
+        font-size: .65rem;
+        text-align: center;
+    }
+
+    .booking-step-indicators li small {
+        font-size: inherit;
     }
 
     .booking-step-indicators li span {
