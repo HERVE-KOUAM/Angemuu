@@ -765,3 +765,8 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Keep reserved image proportions while allowing responsive width rules. */
+img[width][height] {
+    height: auto;
+}
